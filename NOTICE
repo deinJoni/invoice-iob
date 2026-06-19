@@ -1,0 +1,23 @@
+invoice-iob
+Copyright 2026 invoice-iob contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product bundles third-party software in its distributed .mcpb:
+
+- @e-invoice-eu/core (https://github.com/gflohr/e-invoice-eu)
+  License: WTFPL. The EN 16931 engine (UBL/CII/XRechnung XML + ZUGFeRD/Factur-X
+  PDF/A-3 assembly). Pulls @cantoo/pdf-lib (MIT) and other permissive, pure-JS deps.
+  NOTE: WTFPL is maximally permissive but is not an OSI-approved license; flagged here
+  for downstream license-policy / SBOM tooling.
+
+- @cantoo/pdf-lib (https://github.com/cantoo-scribe/pdf-lib) — License: MIT
+- @pdf-lib/fontkit — License: MIT
+- @modelcontextprotocol/sdk — License: MIT
+- zod — License: MIT
+
+Fonts (added in P1): IBM Plex Sans — License: SIL Open Font License 1.1.
+The font's OFL.txt and Reserved Font Name notice will be vendored under assets/fonts/.
+
+Development- and CI-only tools (NOT distributed): esbuild, typescript, @anthropic-ai/mcpb,
+and the Java validators KoSIT validator, veraPDF, and Mustangproject.

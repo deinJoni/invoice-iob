@@ -1,0 +1,65 @@
+{
+  "manifest_version": "0.3",
+  "name": "invoice-iob",
+  "display_name": "invoice-iob — EN 16931 E-Invoices",
+  "version": "0.1.0",
+  "description": "Create EN 16931 e-invoices (XRechnung/UBL/CII XML; visual PDF & ZUGFeRD/Factur-X coming) from simple fields — fully local, no data leaves your machine.",
+  "long_description": "invoice-iob turns simple invoice details into compliant e-invoices for the German/EU market. It generates XRechnung 3.0 (UBL & CII), generic EN 16931 UBL/CII, and — in upcoming versions — a human-readable PDF and a ZUGFeRD/Factur-X hybrid PDF/A-3. Everything runs locally on your machine; no invoice data is ever transmitted. New countries and formats are added as plugins against a stable FormatProvider interface.",
+  "author": {
+    "name": "invoice-iob contributors",
+    "url": "https://github.com/deinJoni/invoice-iob"
+  },
+  "homepage": "https://github.com/deinJoni/invoice-iob",
+  "documentation": "https://github.com/deinJoni/invoice-iob#readme",
+  "support": "https://github.com/deinJoni/invoice-iob/issues",
+  "license": "Apache-2.0",
+  "keywords": [
+    "invoice",
+    "e-invoice",
+    "xrechnung",
+    "zugferd",
+    "factur-x",
+    "en16931",
+    "ubl",
+    "cii",
+    "mcp"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.mjs"],
+      "env": {
+        "INVOICE_IOB_OUTPUT_DIR": "${user_config.output_directory}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "create_invoice",
+      "description": "Create an EN 16931 e-invoice (XML now; PDF and ZUGFeRD/Factur-X in later versions) and save it to the output folder."
+    },
+    {
+      "name": "list_formats",
+      "description": "List the e-invoice formats available in this build."
+    }
+  ],
+  "tools_generated": false,
+  "user_config": {
+    "output_directory": {
+      "type": "directory",
+      "title": "Output folder",
+      "description": "Folder where generated invoice files are written.",
+      "multiple": false,
+      "required": true,
+      "default": "${HOME}/Documents/E-Invoices"
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}

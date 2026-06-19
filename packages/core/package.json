@@ -1,0 +1,17 @@
+{
+  "name": "@invoice-iob/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical EN 16931 invoice model, FormatProvider interface, registry, input mapper and tax math. Engine- and transport-agnostic.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

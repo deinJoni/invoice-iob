@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Packaged MCP bundle
+*.mcpb
+*.dxt
+
+# Test / coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Generated invoices / scratch output
+/output/
+/tmp/
+*.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Dev/CI validator tooling (downloaded, never committed)
+/.validators/
+*.jar

@@ -1,0 +1,18 @@
+{
+  "name": "@invoice-iob/engine-e-invoice-eu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Engine adapter: serializes the canonical model to @e-invoice-eu/core UBL-JSON and drives XML / Factur-X generation. Centralizes the LibreOffice-avoidance guard.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@e-invoice-eu/core": "3.1.1"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "format": "XRECHNUNG-CII",
+  "invoiceNumber": "2026-0042",
+  "issueDate": "2026-06-19",
+  "dueDate": "2026-07-03",
+  "currency": "EUR",
+  "buyerReference": "04011000-12345-67",
+  "note": "Vielen Dank für Ihren Auftrag. / Thank you for your business.",
+  "seller": {
+    "name": "Muster Consulting GmbH",
+    "vatId": "DE123456789",
+    "address": {
+      "line1": "Beispielstraße 1",
+      "city": "Berlin",
+      "postalCode": "10115",
+      "countryCode": "DE"
+    },
+    "contactName": "Erika Mustermann",
+    "contactPhone": "+49 30 1234567",
+    "contactEmail": "billing@muster-consulting.de",
+    "electronicAddress": { "scheme": "EM", "value": "billing@muster-consulting.de" }
+  },
+  "buyer": {
+    "name": "Globex DE GmbH",
+    "vatId": "DE987654321",
+    "address": {
+      "line1": "Industrieweg 7",
+      "city": "München",
+      "postalCode": "80331",
+      "countryCode": "DE"
+    },
+    "electronicAddress": { "scheme": "EM", "value": "ap@globex.example" }
+  },
+  "delivery": { "date": "2026-06-18" },
+  "payment": {
+    "iban": "DE89370400440532013000",
+    "bic": "COBADEFFXXX",
+    "accountName": "Muster Consulting GmbH",
+    "terms": "Zahlbar innerhalb von 14 Tagen ohne Abzug."
+  },
+  "lines": [
+    {
+      "name": "Beratungsleistung",
+      "description": "Senior-Beratung Juni 2026",
+      "quantity": 20,
+      "unitCode": "HUR",
+      "netUnitPrice": 150,
+      "vatRate": 19
+    },
+    {
+      "name": "Reisekosten",
+      "description": "Bahnfahrt Berlin–München",
+      "quantity": 1,
+      "unitCode": "C62",
+      "netUnitPrice": 89.9,
+      "vatRate": 19
+    }
+  ]
+}

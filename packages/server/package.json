@@ -1,0 +1,24 @@
+{
+  "name": "@invoice-iob/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP stdio server exposing create_invoice and list_formats. The .mcpb bundle entrypoint.",
+  "license": "Apache-2.0",
+  "bin": {
+    "invoice-iob": "./src/index.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@invoice-iob/format-ubl-cii": "workspace:*",
+    "@invoice-iob/format-xrechnung": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  }
+}
