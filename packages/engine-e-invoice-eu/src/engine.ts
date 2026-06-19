@@ -27,7 +27,9 @@ export type FacturXFormat =
 let service: InvoiceService | undefined;
 function getService(): InvoiceService {
   // The logger routes all output to stderr (stdout is the MCP JSON-RPC channel).
-  service ??= new InvoiceService(stderrLogger as unknown as ConstructorParameters<typeof InvoiceService>[0]);
+  service ??= new InvoiceService(
+    stderrLogger as unknown as ConstructorParameters<typeof InvoiceService>[0],
+  );
   return service;
 }
 

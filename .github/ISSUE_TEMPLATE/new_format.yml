@@ -1,6 +1,6 @@
 name: New country/format provider
 description: Propose support for a new country or e-invoice format as a FormatProvider plugin.
-title: "New country/format provider: "
+title: 'New country/format provider: '
 labels: [provider]
 body:
   - type: markdown
@@ -49,11 +49,11 @@ body:
       label: Is a pure-JS engine / library available?
       description: A provider must render without spawning a JVM or other native process. Does an existing JS lib cover this format?
       options:
-        - "Yes — @e-invoice-eu/core already supports it"
-        - "Yes — another pure-JS library exists (link below)"
+        - 'Yes — @e-invoice-eu/core already supports it'
+        - 'Yes — another pure-JS library exists (link below)'
         - "Partially — JS exists but doesn't cover this format/CIUS"
-        - "No — only Java/.NET/native tooling exists"
-        - "Unknown"
+        - 'No — only Java/.NET/native tooling exists'
+        - 'Unknown'
     validations:
       required: true
 
@@ -63,9 +63,9 @@ body:
       label: Bundleable in the default `.mcpb`?
       description: Maps to `FormatProvider.meta.bundleable`. "No" means it cannot ship in the default Node-only bundle.
       options:
-        - "Yes — pure JS, no native deps"
-        - "No — requires a native runtime / external tool"
-        - "Unknown"
+        - 'Yes — pure JS, no native deps'
+        - 'No — requires a native runtime / external tool'
+        - 'Unknown'
     validations:
       required: true
 
@@ -75,10 +75,10 @@ body:
       label: Is an official validator available?
       description: For the CI validation gate (like KoSIT for XRechnung). Note any exit-code footguns in the links below.
       options:
-        - "Yes — official / government validator"
-        - "Yes — community / third-party validator"
-        - "No known validator"
-        - "Unknown"
+        - 'Yes — official / government validator'
+        - 'Yes — community / third-party validator'
+        - 'No known validator'
+        - 'Unknown'
     validations:
       required: true
 

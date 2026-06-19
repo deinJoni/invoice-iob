@@ -14,22 +14,22 @@ Per-topic depth: [engine](research/engine.md) · [mcp-sdk](research/mcp-sdk.md) 
 
 ## Pinned dependencies
 
-| package | version | license | purpose | bundled in .mcpb? |
-|---|---|---|---|---|
-| `@modelcontextprotocol/sdk` | **1.29.0** | MIT | MCP server: `McpServer` + `registerTool` + `StdioServerTransport` | **runtime (bundled)** |
-| `zod` | **4.4.3** (v4) | MIT | Tool input/output schemas as raw shapes; `import * as z from "zod/v4"` | **runtime (bundled)** |
-| `@e-invoice-eu/core` | **3.1.1** | WTFPL | EN16931 engine: UBL/CII/XRechnung XML + Factur-X/ZUGFeRD PDF/A-3 assembly | **runtime (bundled)** |
-| `@cantoo/pdf-lib` | **2.7.1** | MIT | Render the visual PDF; same class core uses to load+transform | **runtime (bundled)** |
-| `@pdf-lib/fontkit` | **1.1.1** | MIT | Subset-embed the OFL font (`registerFontkit` + `embedFont({subset:true})`) | **runtime (bundled)** |
-| IBM Plex Sans (Regular+Bold TTF) | IBM/plex master / `@fontsource/ibm-plex-sans@5.2.8` | OFL-1.1 | Visual PDF font (full TTF, subset at render) | **runtime asset (inlined via esbuild binary loader)** |
-| `esbuild` | **0.28.1** | MIT | Bundler (single self-contained `.mjs`) | dev only |
-| `typescript` | **6.0.3** | Apache-2.0 | `tsc --noEmit` typecheck (CI source of truth; `skipLibCheck`) | dev only |
-| `pnpm` | **11.8.0** | MIT | Monorepo workspace manager | dev only |
-| `@anthropic-ai/mcpb` | **2.1.2** | MIT | CLI: init/validate/pack/sign/verify the `.mcpb` (NOT the deprecated `@anthropic-ai/dxt`) | dev/CI only |
-| KoSIT `validator` (standalone jar) | **1.6.2** | Apache-2.0 | XSD + EN16931 + BR-DE Schematron validation | **dev/CI only (Java) — never bundled** |
-| `validator-configuration-xrechnung` | **release 2026-01-31** | Apache-2.0 | KoSIT scenario config (XRechnung Schematron 2.4.0, CEN rules 1.3.15) | **dev/CI only — never bundled** |
-| veraPDF | **1.30** | GPLv3 / MPLv2 | PDF/A-3b conformance (`-f 3b`) | **dev/CI only (Java) — never bundled** |
-| Mustangproject CLI | **2.24.0** | Apache-2.0 | ZUGFeRD/Factur-X profile + container validation (embeds veraPDF) | **dev/CI only (Java) — never bundled** |
+| package                             | version                                             | license       | purpose                                                                                  | bundled in .mcpb?                                     |
+| ----------------------------------- | --------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `@modelcontextprotocol/sdk`         | **1.29.0**                                          | MIT           | MCP server: `McpServer` + `registerTool` + `StdioServerTransport`                        | **runtime (bundled)**                                 |
+| `zod`                               | **4.4.3** (v4)                                      | MIT           | Tool input/output schemas as raw shapes; `import * as z from "zod/v4"`                   | **runtime (bundled)**                                 |
+| `@e-invoice-eu/core`                | **3.1.1**                                           | WTFPL         | EN16931 engine: UBL/CII/XRechnung XML + Factur-X/ZUGFeRD PDF/A-3 assembly                | **runtime (bundled)**                                 |
+| `@cantoo/pdf-lib`                   | **2.7.1**                                           | MIT           | Render the visual PDF; same class core uses to load+transform                            | **runtime (bundled)**                                 |
+| `@pdf-lib/fontkit`                  | **1.1.1**                                           | MIT           | Subset-embed the OFL font (`registerFontkit` + `embedFont({subset:true})`)               | **runtime (bundled)**                                 |
+| IBM Plex Sans (Regular+Bold TTF)    | IBM/plex master / `@fontsource/ibm-plex-sans@5.2.8` | OFL-1.1       | Visual PDF font (full TTF, subset at render)                                             | **runtime asset (inlined via esbuild binary loader)** |
+| `esbuild`                           | **0.28.1**                                          | MIT           | Bundler (single self-contained `.mjs`)                                                   | dev only                                              |
+| `typescript`                        | **6.0.3**                                           | Apache-2.0    | `tsc --noEmit` typecheck (CI source of truth; `skipLibCheck`)                            | dev only                                              |
+| `pnpm`                              | **11.8.0**                                          | MIT           | Monorepo workspace manager                                                               | dev only                                              |
+| `@anthropic-ai/mcpb`                | **2.1.2**                                           | MIT           | CLI: init/validate/pack/sign/verify the `.mcpb` (NOT the deprecated `@anthropic-ai/dxt`) | dev/CI only                                           |
+| KoSIT `validator` (standalone jar)  | **1.6.2**                                           | Apache-2.0    | XSD + EN16931 + BR-DE Schematron validation                                              | **dev/CI only (Java) — never bundled**                |
+| `validator-configuration-xrechnung` | **release 2026-01-31**                              | Apache-2.0    | KoSIT scenario config (XRechnung Schematron 2.4.0, CEN rules 1.3.15)                     | **dev/CI only — never bundled**                       |
+| veraPDF                             | **1.30**                                            | GPLv3 / MPLv2 | PDF/A-3b conformance (`-f 3b`)                                                           | **dev/CI only (Java) — never bundled**                |
+| Mustangproject CLI                  | **2.24.0**                                          | Apache-2.0    | ZUGFeRD/Factur-X profile + container validation (embeds veraPDF)                         | **dev/CI only (Java) — never bundled**                |
 
 Transitive (auto, all pure JS, bundled): `@e965/xlsx` (Apache-2.0, unused), `ajv`, `xmlbuilder2`,
 `jsonpath-plus` (unused path; CVE-patched line), `@esgettext/runtime` (WTFPL), `tmp-promise`,
@@ -46,23 +46,25 @@ reuse it for every format. Omit `cbc:CustomizationID`/`cbc:ProfileID` — the en
 correct per-format URNs.
 
 **XML generation (returns a `string`):**
+
 ```ts
 import { InvoiceService, type Invoice } from '@e-invoice-eu/core';
 const svc = new InvoiceService(console);
-const xml = await svc.generate(invoice, {
-  format: 'XRECHNUNG-CII',   // or 'XRECHNUNG-UBL' | 'UBL' | 'CII'
+const xml = (await svc.generate(invoice, {
+  format: 'XRECHNUNG-CII', // or 'XRECHNUNG-UBL' | 'UBL' | 'CII'
   lang: 'de-de',
-}) as string;
+})) as string;
 ```
 
 **Factur-X / ZUGFeRD PDF/A-3 — SUPPLY OUR OWN visual PDF (returns `Uint8Array`):**
+
 ```ts
 const visualPdf: Uint8Array = await renderInvoicePdf(invoice); // our @cantoo/pdf-lib renderer
-const pdfA3 = await svc.generate(invoice, {
-  format: 'Factur-X-EN16931',          // default profile (Comfort); aliases ZUGFeRD-* normalize
+const pdfA3 = (await svc.generate(invoice, {
+  format: 'Factur-X-EN16931', // default profile (Comfort); aliases ZUGFeRD-* normalize
   lang: 'de-de',
   pdf: { buffer: visualPdf, filename: 'invoice.pdf', mimetype: 'application/pdf' }, // NB: "mimetype"
-}) as Uint8Array;
+})) as Uint8Array;
 ```
 
 **LibreOffice-avoidance rule (load-bearing):** for Factur-X/ZUGFeRD ALWAYS pass `options.pdf`
@@ -128,6 +130,7 @@ provider packages producing one bundle; add turbo 2.9.18 later only if cross-pac
 typecheck+tests get slow).
 
 **Root layout:**
+
 ```
 invoice-iob/
   pnpm-workspace.yaml            # packages: [ "packages/*" ]
@@ -167,6 +170,7 @@ invocation is the stdio command `node <abs path>/server/index.js` with env
 
 **`.mcpb` for Claude Desktop one-click** — `manifest_version: "0.3"`, `server.type: "node"`,
 output folder captured via a `directory` user_config passed through `env`:
+
 ```json
 {
   "manifest_version": "0.3",
@@ -187,41 +191,59 @@ output folder captured via a `directory` user_config passed through `env`:
     }
   },
   "tools": [
-    { "name": "create_invoice", "description": "Create an EN 16931 e-invoice; writes XML + PDF + PDF/A-3 to the output folder." },
-    { "name": "validate_invoice", "description": "Validate invoice data/XML against EN 16931 business rules." }
+    {
+      "name": "create_invoice",
+      "description": "Create an EN 16931 e-invoice; writes XML + PDF + PDF/A-3 to the output folder."
+    },
+    {
+      "name": "validate_invoice",
+      "description": "Validate invoice data/XML against EN 16931 business rules."
+    }
   ],
   "tools_generated": false,
   "user_config": {
     "output_directory": {
-      "type": "directory", "title": "Output folder",
+      "type": "directory",
+      "title": "Output folder",
       "description": "Where generated invoice files are written.",
-      "multiple": false, "required": true, "default": "${DOCUMENTS}"
+      "multiple": false,
+      "required": true,
+      "default": "${DOCUMENTS}"
     }
   },
-  "compatibility": { "platforms": ["darwin","win32","linux"], "runtimes": { "node": ">=18.0.0" } }
+  "compatibility": { "platforms": ["darwin", "win32", "linux"], "runtimes": { "node": ">=18.0.0" } }
 }
 ```
+
 Build flow: `mcpb pack dist/bundle invoice-iob.mcpb` → `mcpb sign invoice-iob.mcpb` (real
 code-signing cert from CI secrets for releases; `--self-signed` for nightlies) → `mcpb verify`
 as a release gate. Signing matters for a tax-document tool (integrity + verified-publisher
 identity). Single-file esbuild bundle, NOT node_modules packing → low single-digit MB.
 
 **Claude Code (`claude mcp add`):**
+
 ```bash
 claude mcp add invoice-iob --scope project --transport stdio \
   --env INVOICE_IOB_OUTPUT_DIR=/Users/you/Invoices \
   -- node /abs/path/to/dist/bundle/server/index.js
 ```
+
 The `--` separator is mandatory. Writes `.mcp.json` (project scope).
 
 **Project `.mcp.json` / Claude Desktop `claude_desktop_config.json`** (same `mcpServers` shape):
+
 ```json
-{ "mcpServers": { "invoice-iob": {
-  "command": "node",
-  "args": ["/abs/path/to/dist/bundle/server/index.js"],
-  "env": { "INVOICE_IOB_OUTPUT_DIR": "/Users/you/Invoices" }
-} } }
+{
+  "mcpServers": {
+    "invoice-iob": {
+      "command": "node",
+      "args": ["/abs/path/to/dist/bundle/server/index.js"],
+      "env": { "INVOICE_IOB_OUTPUT_DIR": "/Users/you/Invoices" }
+    }
+  }
+}
 ```
+
 For `.mcp.json` use env defaults (`${VAR:-default}`) since the var may be unset; optional
 `"timeout": 600000` for long PDF/A-3 assembly.
 
@@ -268,7 +290,7 @@ arbitrary names/diacritics). Full set of German glyphs (ä ö ü Ä Ö Ü ß ẞ
 present. Smallest full TTFs (391 KB R+B; ~66 KB embedded subset). Files to vendor:
 `IBMPlexSans-Regular.ttf`, `IBMPlexSans-Bold.ttf`, and `OFL.txt` (keep the `Reserved Font Name
 "Plex"` notice; never distribute the subset TTF standalone under the reserved name). Source Sans
-3 is the documented softer-look alternative. (Carlito/Caladea are OFL-1.1 — *not* Apache — and
+3 is the documented softer-look alternative. (Carlito/Caladea are OFL-1.1 — _not_ Apache — and
 only worth it for Calibri/Cambria metric compatibility.)
 
 ---
@@ -320,7 +342,7 @@ only worth it for Calibri/Cambria metric compatibility.)
     check its checksum — implement it yourself if claiming B2G readiness).
 15. **Embedded-XML byte-equality caveat:** the standalone XRechnung CII (schema D16B) and the
     embedded Factur-X CII (D22B) are DIFFERENT documents. The §10 byte-equality check only holds
-    when comparing the embedded Factur-X XML against the standalone *Factur-X* CII artifact, not
+    when comparing the embedded Factur-X XML against the standalone _Factur-X_ CII artifact, not
     the XRechnung CII.
 16. **esbuild ESM needs a `createRequire` banner** (transitive CJS `require()`), and **`tsc`
     needs `skipLibCheck:true`** (otherwise hangs on the Zod4+SDK `.d.ts` graph). Target `node22`
@@ -330,17 +352,17 @@ only worth it for Calibri/Cambria metric compatibility.)
 
 ## Open risks and CI mitigations
 
-| risk | mitigation |
-|---|---|
+| risk                                                                          | mitigation                                                                                                                                                        |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Engine's pdf-lib PDF/A-3 path is "not battle tested" — highest technical risk | CI gate EVERY build: veraPDF `-f 3b` (`isCompliant=true`, `failedChecks=0`) + Mustang `--action validate` (`status=valid`, profile == EN 16931) on real fixtures. |
-| LibreOffice/spreadsheet path accidentally taken at runtime | Provider guard asserting `options.pdf` set and `spreadsheet`/`libreOfficePath` never passed; unit test the guard. |
-| KoSIT exit-code footgun (0 on invalid) | Parse the VARL report: assert `recommendation=accept` and zero `<rep:error>`; never trust exit code. Run for standalone XML AND extracted embedded XML. |
-| Stray stdout write hangs Claude Desktop | All logs to stderr; test the bundled `.mjs` over a real stdio handshake in CI before shipping. |
-| Two divergent `@cantoo/pdf-lib` copies → "foreign PDFDocument" | Pin compatibly with core's `^2.6.5`; assert a single resolved instance. |
-| Bundle/`.mcpb` size + asset paths shift after packing | Verify the PACKED `.mcpb` end-to-end (not just the dev build); inline assets via binary loader; subset font; confirm low single-digit MB. |
-| `tsc` hang on Zod4+SDK types | `skipLibCheck:true`; `tsc --noEmit` as CI source of truth (not tsgo, which is beta). |
-| WTFPL dependency (engine + esgettext) trips license policy | Document in NOTICE/SBOM; get legal sign-off before public launch. |
-| Self-signed `.mcpb` shows unverified publisher | Acquire a real code-signing cert before public release; `mcpb verify` as a release gate. |
-| XRechnung 4.0 / KoSIT version bumps | Isolate the CIUS version in the model; pin validator config; track upstream `@e-invoice-eu/core` + KoSIT releases via dependabot. |
-| Validator download URLs rot each release | Resolve artifact URLs via the GitHub releases API in CI, not hardcoded paths. |
-| jsonpath-plus CVE history (transitive, unused path) | Keep in npm audit scope; 10.4.0 is the patched line. |
+| LibreOffice/spreadsheet path accidentally taken at runtime                    | Provider guard asserting `options.pdf` set and `spreadsheet`/`libreOfficePath` never passed; unit test the guard.                                                 |
+| KoSIT exit-code footgun (0 on invalid)                                        | Parse the VARL report: assert `recommendation=accept` and zero `<rep:error>`; never trust exit code. Run for standalone XML AND extracted embedded XML.           |
+| Stray stdout write hangs Claude Desktop                                       | All logs to stderr; test the bundled `.mjs` over a real stdio handshake in CI before shipping.                                                                    |
+| Two divergent `@cantoo/pdf-lib` copies → "foreign PDFDocument"                | Pin compatibly with core's `^2.6.5`; assert a single resolved instance.                                                                                           |
+| Bundle/`.mcpb` size + asset paths shift after packing                         | Verify the PACKED `.mcpb` end-to-end (not just the dev build); inline assets via binary loader; subset font; confirm low single-digit MB.                         |
+| `tsc` hang on Zod4+SDK types                                                  | `skipLibCheck:true`; `tsc --noEmit` as CI source of truth (not tsgo, which is beta).                                                                              |
+| WTFPL dependency (engine + esgettext) trips license policy                    | Document in NOTICE/SBOM; get legal sign-off before public launch.                                                                                                 |
+| Self-signed `.mcpb` shows unverified publisher                                | Acquire a real code-signing cert before public release; `mcpb verify` as a release gate.                                                                          |
+| XRechnung 4.0 / KoSIT version bumps                                           | Isolate the CIUS version in the model; pin validator config; track upstream `@e-invoice-eu/core` + KoSIT releases via dependabot.                                 |
+| Validator download URLs rot each release                                      | Resolve artifact URLs via the GitHub releases API in CI, not hardcoded paths.                                                                                     |
+| jsonpath-plus CVE history (transitive, unused path)                           | Keep in npm audit scope; 10.4.0 is the patched line.                                                                                                              |

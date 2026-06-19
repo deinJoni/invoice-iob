@@ -19,6 +19,7 @@ The invoice input is NOT a bespoke JSON schema: it is a UBL-syntax JSON tree roo
 - **Entry points:** `main: dist/e-invoice-eu.cjs.js`, `module: dist/e-invoice-eu.esm.js`, plus UMD `dist/e-invoice-eu.min.js` and a browser build. Ships its own `.d.ts` (no `@types` needed).
 
 ### Runtime dependencies (exact)
+
 - `@cantoo/pdf-lib ^2.6.5` → resolves to **2.7.1** (MIT). The PDF/A-3 assembly engine. Transitive deps all pure JS: `@pdf-lib/standard-fonts`, `@pdf-lib/upng`, `color`, `crypto-js`, `node-html-better-parser`, `pako`, `tslib`. No native code.
 - `@e965/xlsx ^0.20.3` (Apache-2.0, zero deps) — maintained SheetJS fork, used only by the spreadsheet/`MappingService` path. Pure JS.
 - `@esgettext/runtime ^1.3.10` (WTFPL) — i18n runtime for log/error strings. Pure JS.
@@ -51,40 +52,44 @@ const result: string | Uint8Array = await svc.generate(invoice, options);
 ```
 
 `InvoiceService.generate(input: Invoice, options: InvoiceServiceOptions): Promise<string | Uint8Array>`
+
 - Returns a **`string`** (the XML) for pure-XML formats (UBL, CII, XRECHNUNG-UBL, XRECHNUNG-CII).
 - Returns a **`Uint8Array`** (the PDF/A-3 bytes) for Factur-X/ZUGFeRD formats.
 
 `InvoiceServiceOptions` (exact):
+
 ```ts
 type FileInfo = {
   buffer: Uint8Array;
   filename: string;
-  mimetype: string;     // note: spelled "mimetype" (lowercase t), not mimeType
+  mimetype: string; // note: spelled "mimetype" (lowercase t), not mimeType
   id?: string;
   description?: string;
 };
 type InvoiceServiceOptions = {
-  format: string;                  // e.g. 'XRECHNUNG-CII', 'Factur-X-EN16931', case-insensitive + aliases
-  spreadsheet?: FileInfo;          // DO NOT SET — triggers LibreOffice
-  pdf?: FileInfo;                  // YOUR pre-rendered visual PDF goes here
-  lang: string;                    // e.g. 'de-de' — only used for canned XMP text in Factur-X PDFs
-  attachments?: FileInfo[];        // extra files: embedded in XML (XML formats) or attached to PDF (Factur-X)
-  embedPDF?: boolean;              // XML formats only: base64-embed a PDF inside the XML
-  libreOfficePath?: string;        // path to soffice; only consulted on the spreadsheet path
-  noWarnings?: boolean;            // silence the v4 deprecation console.warn
+  format: string; // e.g. 'XRECHNUNG-CII', 'Factur-X-EN16931', case-insensitive + aliases
+  spreadsheet?: FileInfo; // DO NOT SET — triggers LibreOffice
+  pdf?: FileInfo; // YOUR pre-rendered visual PDF goes here
+  lang: string; // e.g. 'de-de' — only used for canned XMP text in Factur-X PDFs
+  attachments?: FileInfo[]; // extra files: embedded in XML (XML formats) or attached to PDF (Factur-X)
+  embedPDF?: boolean; // XML formats only: base64-embed a PDF inside the XML
+  libreOfficePath?: string; // path to soffice; only consulted on the spreadsheet path
+  noWarnings?: boolean; // silence the v4 deprecation console.warn
   postProcessor?: (data: ExpandObject) => Promise<void>; // hook to mutate the xmlbuilder2 tree before serialization
 };
 ```
+
 (The README's prose calls the spreadsheet arg `data`; the actual TS field is **`spreadsheet`**. Trust the type.)
 
 ### (a) Generate EN16931 XML — UBL / CII / XRechnung-UBL / XRechnung-CII
 
 ```ts
-const xml: string = await svc.generate(invoice, {
-  format: 'XRECHNUNG-CII',   // or 'XRECHNUNG-UBL' | 'UBL' | 'CII'
+const xml: string = (await svc.generate(invoice, {
+  format: 'XRECHNUNG-CII', // or 'XRECHNUNG-UBL' | 'UBL' | 'CII'
   lang: 'de-de',
-}) as string;
+})) as string;
 ```
+
 Format names accepted (case-insensitive): `UBL`, `CII`, `XRECHNUNG-UBL`, `XRECHNUNG-CII`. `embedPDF: true` requires you to ALSO pass `pdf` (or it would try LibreOffice).
 
 ### (b) Generate ZUGFeRD/Factur-X PDF/A-3 by SUPPLYING YOUR OWN visual PDF (LibreOffice-free path)
@@ -101,6 +106,7 @@ const pdfA3: Uint8Array = await svc.generate(invoice, {
   },
 }) as Uint8Array;
 ```
+
 Confirmed by the bundle's `FormatXMLService.getInvoicePdf(options)`: `if (options.pdf) { if (!options.pdf.buffer) throw; return options.pdf.buffer; }` — your buffer is used verbatim; the LibreOffice branch is only reached when `pdf` is undefined.
 
 ### Enumerate / normalize formats
@@ -115,6 +121,7 @@ const canonical = f.normalizeFormat('ZUGFeRD-Comfort'); // -> 'factur-x-en16931'
 ### Invoice JSON shape (its "schema")
 
 It is **UBL-syntax JSON**, not a flat custom model. Root:
+
 ```ts
 interface Invoice {
   'ubl:Invoice': {
@@ -142,6 +149,7 @@ interface Invoice {
   };
 }
 ```
+
 Field value types are heavily enumerated (currency/country codes, invoice type codes, scheme identifiers, EAS codes). Ajv enforces these at `generate()` time, throwing `Ajv2019.ValidationError` on bad input.
 
 `generate()` internally: `structuredClone` input → (legacy Note coercion) → resolve format service → `ajv.compile(patchedSchema)` (`strict:true, allErrors:true, useDefaults:true`) → validate → `formatter.fillInvoiceDefaults()` → `formatter.generate()`. `fillInvoiceDefaults` auto-sets `cbc:CustomizationID` and `cbc:ProfileID` to the format-correct URNs if omitted — so omit them and let the engine set the right ones per format.
@@ -149,6 +157,7 @@ Field value types are heavily enumerated (currency/country codes, invoice type c
 ## 3. The LibreOffice path and how to guarantee it never runs
 
 Confirmed by reading the compiled bundle (`dist/e-invoice-eu.cjs.js`):
+
 - The module top-level imports `child_process`.
 - `renderSpreadsheet(...)` does `child_process.spawn(libreoffice, ['--headless', ..., '--convert-to', 'pdf', ...])`. This is the ONLY external-binary shell-out.
 - It is reached exclusively via `FormatXMLService.getInvoicePdf(options)`:
@@ -161,18 +170,18 @@ Confirmed by reading the compiled bundle (`dist/e-invoice-eu.cjs.js`):
 
 ## 4. Supported profiles and target versions
 
-| format name | syntax | mimeType | customizationID |
-|---|---|---|---|
-| `CII` | CII | application/xml | urn:cen.eu:en16931:2017 |
-| `UBL` | UBL | application/xml | urn:cen.eu:en16931:2017 |
-| `XRECHNUNG-UBL` | UBL | application/xml | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
-| `XRECHNUNG-CII` | CII | application/xml | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
-| `Factur-X-Minimum` | CII | application/pdf | urn:factur-x.eu:1p0:minimum |
-| `Factur-X-Basic WL` | CII | application/pdf | urn:factur-x.eu:1p0:basicwl |
-| `Factur-X-Basic` | CII | application/pdf | urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic |
-| `Factur-X-EN16931` | CII | application/pdf | urn:cen.eu:en16931:2017 |
-| `Factur-X-Extended` | CII | application/pdf | urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended |
-| `Factur-X-XRechnung` | CII | application/pdf | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
+| format name          | syntax | mimeType        | customizationID                                                       |
+| -------------------- | ------ | --------------- | --------------------------------------------------------------------- |
+| `CII`                | CII    | application/xml | urn:cen.eu:en16931:2017                                               |
+| `UBL`                | UBL    | application/xml | urn:cen.eu:en16931:2017                                               |
+| `XRECHNUNG-UBL`      | UBL    | application/xml | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
+| `XRECHNUNG-CII`      | CII    | application/xml | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
+| `Factur-X-Minimum`   | CII    | application/pdf | urn:factur-x.eu:1p0:minimum                                           |
+| `Factur-X-Basic WL`  | CII    | application/pdf | urn:factur-x.eu:1p0:basicwl                                           |
+| `Factur-X-Basic`     | CII    | application/pdf | urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic           |
+| `Factur-X-EN16931`   | CII    | application/pdf | urn:cen.eu:en16931:2017                                               |
+| `Factur-X-Extended`  | CII    | application/pdf | urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended       |
+| `Factur-X-XRechnung` | CII    | application/pdf | urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 |
 
 - **XRechnung version targeted: 3.0** (`urn:xeinkauf.de:kosit:xrechnung_3.0`). Plain UBL/CII profileID for Peppol is `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0`.
 - **Aliases** (`normalizeFormat`, case-insensitive): `*-Comfort` → `*-en16931`; `*-Basic WL`/`*-Basic-WL`/`*-Basic_WL` → `*-basic wl`; `zugferd-*` → `factur-x-*`.
@@ -180,6 +189,7 @@ Confirmed by reading the compiled bundle (`dist/e-invoice-eu.cjs.js`):
 ## 5. BT-/BG- mapping into the engine input
 
 Map your canonical model into the UBL-syntax `Invoice` object by element PATH, then call `generate()`. The engine's JSON Schema annotates every leaf with its EN16931 term (259 BT/BG references). Examples:
+
 - BT-1 Invoice number → `ubl:Invoice.cbc:ID`
 - BT-2 Issue date → `ubl:Invoice.cbc:IssueDate`
 - BT-3 Type code → `ubl:Invoice.cbc:InvoiceTypeCode`
@@ -213,17 +223,17 @@ Keep your canonical model and write a one-shot serializer to this UBL-JSON tree 
 
 ## Packages
 
-| name | version | license | purpose |
-|---|---|---|---|
-| @e-invoice-eu/core | 3.1.1 | WTFPL | EN16931 engine: UBL/CII/XRechnung XML + Factur-X/ZUGFeRD PDF/A-3 via supply-a-PDF path |
-| @cantoo/pdf-lib | 2.7.1 | MIT | (transitive) PDF/A-3 transformation + factur-x.xml embedding |
-| @e965/xlsx | 0.20.3 | Apache-2.0 | (transitive) spreadsheet import for MappingService only — unused |
-| ajv | ^8.18.0 | MIT | validates invoice input at generate() time |
-| xmlbuilder2 | 4.0.3 | MIT | builds/serializes UBL/CII XML trees |
-| jsonpath-plus | 10.4.0 | MIT | mapping engine only (unused); note CVE history, 10.x patched |
-| @esgettext/runtime | 1.3.10 | WTFPL | i18n runtime |
-| tmp-promise | 3.0.3 | MIT | temp files; LibreOffice path only |
-| tslib | ^2.8.1 | 0BSD | TS helper runtime |
+| name               | version | license    | purpose                                                                                |
+| ------------------ | ------- | ---------- | -------------------------------------------------------------------------------------- |
+| @e-invoice-eu/core | 3.1.1   | WTFPL      | EN16931 engine: UBL/CII/XRechnung XML + Factur-X/ZUGFeRD PDF/A-3 via supply-a-PDF path |
+| @cantoo/pdf-lib    | 2.7.1   | MIT        | (transitive) PDF/A-3 transformation + factur-x.xml embedding                           |
+| @e965/xlsx         | 0.20.3  | Apache-2.0 | (transitive) spreadsheet import for MappingService only — unused                       |
+| ajv                | ^8.18.0 | MIT        | validates invoice input at generate() time                                             |
+| xmlbuilder2        | 4.0.3   | MIT        | builds/serializes UBL/CII XML trees                                                    |
+| jsonpath-plus      | 10.4.0  | MIT        | mapping engine only (unused); note CVE history, 10.x patched                           |
+| @esgettext/runtime | 1.3.10  | WTFPL      | i18n runtime                                                                           |
+| tmp-promise        | 3.0.3   | MIT        | temp files; LibreOffice path only                                                      |
+| tslib              | ^2.8.1  | 0BSD       | TS helper runtime                                                                      |
 
 ## Risks
 

@@ -1,32 +1,26 @@
-// Runs the KoSIT validator (Java) over a directory of XML invoices and PARSES its report.
+// Runs the KoSIT validator (Java) over the XRechnung XML fixtures and PARSES its report.
 //
 // ┌─ THE VARL FOOTGUN (load-bearing — see docs/STACK.md PRD correction #10) ───────────────────┐
 // │ The KoSIT validator exits 0 even for INVALID invoices. A non-zero exit means a config/IO    │
 // │ error (bad scenarios.xml, missing repository), NOT a failed invoice. So we NEVER trust the  │
-// │ exit code: we parse each VARL report (Validation Result Report Language) instead.            │
-// │                                                                                              │
-// │ VARL report shape (rep: = http://www.xoev.de/de/validator/varl/1):                           │
-// │   <rep:report> <rep:scenarioMatched> <rep:validationStepResult>                              │
-// │       <rep:message level="error|warning|information" code=… />   ← findings                  │
-// │   <rep:assessment> <rep:accept|rep:reject>                       ← the verdict               │
-// │ We assert the assessment is <rep:accept> AND there are zero <rep:message level="error">.     │
-// │ (The brief calls the verdict a "recommendation of accept"; in VARL that is literally the     │
-// │ rep:accept element under rep:assessment, and errors are rep:message[@level='error'], not a   │
-// │ rep:error element — so we match the real XSOEV output, not a paraphrase of it.)              │
+// │ exit code: we parse each VARL report instead (parseKositReport, unit-tested in lib/reports). │
 // └─────────────────────────────────────────────────────────────────────────────────────────────┘
+//
+// Which files: by default the fixtures whose gate is `kosit` (xrechnung-cii / xrechnung-ubl, for
+// every example), read from dist/fixtures/manifest.json. If FIXTURES_DIR has no manifest we
+// validate every *.xml in it — that mode is how the hybrid job KoSIT-checks the factur-x.xml it
+// extracts from the XRECHNUNG-profile hybrid.
 //
 // Inputs via env:
 //   KOSIT_JAR        — path to validator-<ver>-standalone.jar (KoSIT validator 1.6.2)
 //   KOSIT_SCENARIOS  — path to scenarios.xml from validator-configuration-xrechnung (2026-01-31)
-//   FIXTURES_DIR     — directory of *.xml to validate (default: dist/fixtures)
-//
-// Invocation (the validator resolves Schematron/XSD relative to the scenarios.xml's directory,
-// which it treats as the repository): java -jar $KOSIT_JAR -s $KOSIT_SCENARIOS -r <repo> -o <out> <xml...>
+//   FIXTURES_DIR     — directory of fixtures (default: dist/fixtures)
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseKositReport } from './lib/reports.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -46,12 +40,21 @@ if (!KOSIT_SCENARIOS) die('KOSIT_SCENARIOS is not set (path to scenarios.xml).')
 // resolves every referenced Schematron/XSD relative to the repository dir we pass with -r.
 const repoDir = dirname(resolve(KOSIT_SCENARIOS));
 
-const allFiles = await readdir(fixturesDir);
-const xmlFiles = allFiles
-  .filter((f) => f.toLowerCase().endsWith('.xml'))
-  .map((f) => join(fixturesDir, f));
+// Prefer the manifest (validate exactly the kosit-gate fixtures); fall back to all *.xml.
+async function xmlTargets() {
+  try {
+    const manifest = JSON.parse(await readFile(join(fixturesDir, 'manifest.json'), 'utf8'));
+    return manifest.filter((e) => e.gate === 'kosit').map((e) => join(fixturesDir, e.file));
+  } catch {
+    return (await readdir(fixturesDir))
+      .filter((f) => f.toLowerCase().endsWith('.xml'))
+      .map((f) => join(fixturesDir, f));
+  }
+}
+
+const xmlFiles = await xmlTargets();
 if (xmlFiles.length === 0)
-  die(`No *.xml found in ${fixturesDir}. Run scripts/gen-fixtures.mjs first.`);
+  die(`No XML for the kosit gate in ${fixturesDir}. Run scripts/gen-fixtures.mjs first.`);
 
 console.log(`KoSIT validator over ${xmlFiles.length} file(s) in ${fixturesDir}`);
 console.log(`  jar:        ${KOSIT_JAR}`);
@@ -62,9 +65,8 @@ const outDir = await mkdtemp(join(tmpdir(), 'kosit-report-'));
 await mkdir(outDir, { recursive: true });
 
 try {
-  // We tolerate a non-zero exit here because the exit code is NOT the source of truth (see the
-  // VARL footgun above) — the per-file report parse below is. A genuine config/IO failure shows
-  // up as missing/empty reports, which we treat as FAIL too.
+  // Non-zero exit is tolerated here (the exit code is NOT the source of truth — see footgun).
+  // A genuine config/IO failure shows up as missing/empty reports, which we treat as FAIL too.
   execFileSync(
     'java',
     ['-jar', KOSIT_JAR, '-s', KOSIT_SCENARIOS, '-r', repoDir, '-o', outDir, ...xmlFiles],
@@ -72,20 +74,6 @@ try {
   );
 } catch (err) {
   console.error(`\n(note) validator exited non-zero — parsing reports anyway: ${err.message}\n`);
-}
-
-// Count error findings: <rep:message ... level="error" ...> (attribute order is not fixed).
-function countErrors(xml) {
-  const messages = xml.match(/<(?:[A-Za-z0-9_]+:)?message\b[^>]*>/g) ?? [];
-  return messages.filter((m) => /\blevel\s*=\s*["']error["']/i.test(m)).length;
-}
-
-// The verdict: <rep:accept> (or <rep:reject>) under <rep:assessment>. Match either as a
-// self-closing or container element, namespace-agnostic.
-function recommendation(xml) {
-  if (/<(?:[A-Za-z0-9_]+:)?accept[\s/>]/.test(xml)) return 'accept';
-  if (/<(?:[A-Za-z0-9_]+:)?reject[\s/>]/.test(xml)) return 'reject';
-  return null;
 }
 
 const reportFiles = (await readdir(outDir)).filter((f) => f.toLowerCase().endsWith('-report.xml'));
@@ -101,11 +89,9 @@ for (const xml of xmlFiles) {
     continue;
   }
   const report = await readFile(join(outDir, reportName), 'utf8');
-  const rec = recommendation(report);
-  const errors = countErrors(report);
-  const pass = rec === 'accept' && errors === 0;
+  const { recommendation, errorCount, pass } = parseKositReport(report);
   console.log(
-    `  ${pass ? '✓' : '✗'} ${base}  — ${pass ? 'PASS' : 'FAIL'} (recommendation=${rec ?? 'none'}, error findings=${errors})`,
+    `  ${pass ? '✓' : '✗'} ${base}  — ${pass ? 'PASS' : 'FAIL'} (recommendation=${recommendation ?? 'none'}, error findings=${errorCount})`,
   );
   if (!pass) failed++;
 }

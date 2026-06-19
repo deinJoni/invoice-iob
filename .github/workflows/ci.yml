@@ -14,19 +14,21 @@ concurrency:
 permissions:
   contents: read
 
-# Dev/CI uses Node 24: `node --test` runs the TypeScript tests directly via native type-stripping
-# (default in Node >=22.18). The SHIPPED .mcpb is plain JS (esbuild target node20) and still runs
-# on Node >=20 — that floor is unaffected by this.
-env:
-  NODE_VERSION: '24'
-
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
-  # build-test: install → typecheck → test → build → pack → smoke. Produces the .mcpb.
+  # build-test: the fast, Java-free feedback loop. Runs on a Node matrix so we prove BOTH the
+  # dev/CI runtime (Node 24, where `node --test` strips TS types natively) AND the shipped bundle's
+  # floor (Node 20 — the esbuild target and the .mcpb's declared minimum). format:check, typecheck
+  # and the unit tests are dev-node checks (Node ≥22 runs the native-TS tests); build + the coverage
+  # drift guard + pack + smoke run on EVERY node so a regression on the floor is caught on push.
   # ─────────────────────────────────────────────────────────────────────────────
   build-test:
-    name: build · typecheck · test · pack · smoke
+    name: build · test · pack · smoke (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22', '24']
     steps:
       - uses: actions/checkout@v4
 
@@ -35,28 +37,41 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Dev-node checks (Node ≥22): formatting, types, unit tests. `node --test` runs the TypeScript
+      # tests via native type-stripping (Node ≥22.18), so it cannot run on the Node-20 floor job.
+      - name: Format check
+        if: matrix.node-version != '20'
+        run: pnpm run format:check
+
       - name: Typecheck
+        if: matrix.node-version != '20'
         run: pnpm run typecheck
 
-      - name: Unit tests
+      - name: Unit tests (incl. report-parser gate tests)
+        if: matrix.node-version != '20'
         run: pnpm test
 
+      # Runs on every node — proves the SHIPPED artifact builds, packs and runs on the floor too.
       - name: Build bundle
         run: pnpm run build
+
+      - name: Coverage drift guard (every format maps to a CI gate)
+        run: pnpm run check:coverage
 
       - name: Pack .mcpb
         run: pnpm run pack:mcpb
 
-      - name: Smoke test (real MCP stdio handshake)
+      - name: Smoke test (real MCP stdio handshake — the gate for the visual PDF path)
         run: pnpm run smoke
 
       - name: Upload .mcpb artifact
+        if: matrix.node-version == '24'
         uses: actions/upload-artifact@v4
         with:
           name: invoice-iob-mcpb
@@ -65,134 +80,95 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # kosit: P0 EXIT GATE. Generates XML fixtures, then validates them with the KoSIT
-  # validator (Java) — parsing the VARL report, never the exit code (see kosit-check.mjs).
-  # We rebuild here (rather than reuse the build-test artifact) to keep the job self-contained.
+  # kosit: P0 EXIT GATE. XRechnung (UBL & CII), for EVERY example, validated by the KoSIT validator.
+  # We parse the VARL report, never the exit code (KoSIT exits 0 even for a REJECT — see
+  # scripts/kosit-check.mjs). gen-fixtures only emits this gate's fixtures (FIXTURE_GATES=kosit).
   # ─────────────────────────────────────────────────────────────────────────────
   kosit:
     name: KoSIT XRechnung validation (P0 gate)
     runs-on: ubuntu-latest
     needs: build-test
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # lets fetch-kosit.sh resolve asset URLs via the API
     steps:
       - uses: actions/checkout@v4
-
-      - name: Enable corepack
-        run: corepack enable
-
+      - run: corepack enable
       - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
+        with: { node-version: '24', cache: pnpm }
       - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
+        with: { distribution: temurin, java-version: '21' }
+      - run: pnpm install --frozen-lockfile
       - name: Build bundle
         run: pnpm run build
-
-      - name: Generate XML fixtures
-        run: node scripts/gen-fixtures.mjs
-
-      # Resolve the asset download URLs via the GitHub Releases API rather than hardcoding paths
-      # that rot on the next release. We pin the *tags* (validator v1.6.2; config v2026-01-31)
-      # and let the API hand us the current browser_download_url for each asset.
-      #
-      # Documented fallback URLs (used if the API is unreachable; keep in sync with docs/STACK.md):
-      #   jar:    https://github.com/itplr-kosit/validator/releases/download/v1.6.2/validator-1.6.2-standalone.jar
-      #   config: https://github.com/itplr-kosit/validator-configuration-xrechnung/releases/download/v2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31.zip
-      - name: Download KoSIT validator 1.6.2 + validator-configuration-xrechnung (2026-01-31)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATOR_TAG: v1.6.2
-          CONFIG_TAG: v2026-01-31
-        run: |
-          set -euo pipefail
-          mkdir -p .validators
-          api() { gh api "$1" --jq "$2"; }
-
-          # KoSIT validator: pick the *-standalone.jar asset of the pinned tag.
-          JAR_URL="$(api \
-            "repos/itplr-kosit/validator/releases/tags/${VALIDATOR_TAG}" \
-            '.assets[] | select(.name | test("standalone.*\\.jar$")) | .browser_download_url' \
-            | head -n1)"
-          JAR_URL="${JAR_URL:-https://github.com/itplr-kosit/validator/releases/download/v1.6.2/validator-1.6.2-standalone.jar}"
-          echo "validator jar: $JAR_URL"
-          curl -fsSL "$JAR_URL" -o .validators/validator-standalone.jar
-
-          # validator-configuration-xrechnung: the only .zip asset of the pinned tag.
-          CFG_URL="$(api \
-            "repos/itplr-kosit/validator-configuration-xrechnung/releases/tags/${CONFIG_TAG}" \
-            '.assets[] | select(.name | test("\\.zip$")) | .browser_download_url' \
-            | head -n1)"
-          CFG_URL="${CFG_URL:-https://github.com/itplr-kosit/validator-configuration-xrechnung/releases/download/v2026-01-31/xrechnung-3.0.2-validator-configuration-2026-01-31.zip}"
-          echo "config zip: $CFG_URL"
-          curl -fsSL "$CFG_URL" -o .validators/config.zip
-          unzip -q .validators/config.zip -d .validators/config
-
-          # scenarios.xml sits at the root of the extracted configuration.
-          SCENARIOS="$(find .validators/config -maxdepth 2 -name scenarios.xml | head -n1)"
-          test -n "$SCENARIOS" || { echo "scenarios.xml not found in configuration zip"; exit 1; }
-          echo "KOSIT_JAR=$PWD/.validators/validator-standalone.jar" >> "$GITHUB_ENV"
-          echo "KOSIT_SCENARIOS=$PWD/$SCENARIOS" >> "$GITHUB_ENV"
-
+      - name: Generate XRechnung fixtures
+        run: FIXTURE_GATES=kosit pnpm run fixtures
+      - name: Fetch KoSIT validator + XRechnung config (pinned)
+        run: bash scripts/ci/fetch-kosit.sh >> "$GITHUB_ENV"
       - name: KoSIT validate (parse VARL report, not exit code)
-        env:
-          FIXTURES_DIR: dist/fixtures
         run: node scripts/kosit-check.mjs
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # pdfa-hybrid: P2 EXIT GATE. Generates the ZUGFeRD/Factur-X hybrid, then validates it with the
-  # Mustangproject CLI, whose `--action validate` runs an embedded veraPDF (PDF/A-3b conformance)
-  # AND checks the Factur-X container + the embedded factur-x.xml against EN 16931. We parse the
-  # report's summary status (Mustang's exit code is unreliable across versions; see mustang-check.mjs).
+  # en16931: generic EN 16931 EXIT GATE for the pan-EU `ubl` / `cii` formats — validated against the
+  # official CEN EN 16931 Schematron (ConnectingEurope/eInvoicing-EN16931) via Saxon-HE, parsing the
+  # SVRL report's fatal failed-asserts (scripts/en16931-check.mjs). A different, independent
+  # validator from KoSIT, so the two XML families are checked by two implementations of the rules.
   # ─────────────────────────────────────────────────────────────────────────────
-  pdfa-hybrid:
-    name: ZUGFeRD/Factur-X + PDF/A-3 validation (P2 gate)
+  en16931:
+    name: EN 16931 Schematron validation (UBL/CII)
     runs-on: ubuntu-latest
     needs: build-test
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Enable corepack
-        run: corepack enable
-
+      - run: corepack enable
       - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
+        with: { node-version: '24', cache: pnpm }
       - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
+        with: { distribution: temurin, java-version: '21' }
+      - run: pnpm install --frozen-lockfile
       - name: Build bundle
         run: pnpm run build
+      - name: Generate generic EN 16931 fixtures
+        run: FIXTURE_GATES=en16931 pnpm run fixtures
+      - name: Fetch CEN EN 16931 Schematron + Saxon-HE (pinned)
+        run: bash scripts/ci/fetch-en16931.sh >> "$GITHUB_ENV"
+      - name: EN 16931 validate (Saxon → parse SVRL, not exit code)
+        run: node scripts/en16931-check.mjs
 
-      - name: Generate fixtures (incl. ZUGFeRD hybrid)
-        run: node scripts/gen-fixtures.mjs
-
-      # Mustang publishes the runnable CLI jar as a GitHub release asset under the `core-<ver>` tag.
-      # We pin the exact asset URL (verified: tag core-2.24.0 → Mustang-CLI-2.24.0.jar) — no API/jq.
-      - name: Download Mustangproject CLI 2.24.0 (embeds veraPDF)
-        run: |
-          set -euo pipefail
-          mkdir -p .validators
-          JAR_URL="https://github.com/ZUGFeRD/mustangproject/releases/download/core-2.24.0/Mustang-CLI-2.24.0.jar"
-          echo "Mustang CLI: $JAR_URL"
-          curl -fsSL "$JAR_URL" -o .validators/mustang-cli.jar
-          test -s .validators/mustang-cli.jar || { echo "Mustang CLI jar download empty"; exit 1; }
-          echo "MUSTANG_JAR=$PWD/.validators/mustang-cli.jar" >> "$GITHUB_ENV"
-
-      - name: Validate hybrid (Mustang --action validate → embedded veraPDF + Factur-X)
-        env:
-          FIXTURES_DIR: dist/fixtures
+  # ─────────────────────────────────────────────────────────────────────────────
+  # pdfa-hybrid: P2 EXIT GATE. The ZUGFeRD/Factur-X hybrid for EVERY profile (EN16931/BASIC/EXTENDED/
+  # XRECHNUNG) × every example, validated by Mustangproject `--action validate` (embeds veraPDF for
+  # PDF/A-3b + checks the Factur-X container + embedded XML EN 16931). Then, for the XRECHNUNG
+  # profile, we extract the embedded factur-x.xml and run it through KoSIT — proving the embedded
+  # document is itself a valid XRechnung, not just that the container validates.
+  # ─────────────────────────────────────────────────────────────────────────────
+  pdfa-hybrid:
+    name: ZUGFeRD/Factur-X + PDF/A-3 validation (P2 gate, all profiles)
+    runs-on: ubuntu-latest
+    needs: build-test
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: pnpm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: pnpm install --frozen-lockfile
+      - name: Build bundle
+        run: pnpm run build
+      - name: Generate hybrid fixtures (all profiles × all examples)
+        run: FIXTURE_GATES=mustang pnpm run fixtures
+      - name: Fetch Mustangproject CLI (pinned)
+        run: bash scripts/ci/fetch-mustang.sh >> "$GITHUB_ENV"
+      - name: Validate hybrids (Mustang --action validate → embedded veraPDF + Factur-X)
         run: node scripts/mustang-check.mjs
+      # Cross-check: the XRECHNUNG-profile hybrid's embedded CII must itself pass KoSIT.
+      - name: Fetch KoSIT validator + XRechnung config (pinned)
+        run: bash scripts/ci/fetch-kosit.sh >> "$GITHUB_ENV"
+      - name: Extract embedded factur-x.xml (Mustang --action extract)
+        run: node scripts/extract-embedded.mjs
+      - name: KoSIT validate the extracted embedded XRechnung CII
+        run: FIXTURES_DIR=dist/embedded node scripts/kosit-check.mjs

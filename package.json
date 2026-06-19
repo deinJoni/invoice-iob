@@ -17,8 +17,10 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test \"packages/**/*.test.ts\"",
+    "test": "node --test \"packages/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
     "smoke": "node scripts/build.mjs && node scripts/smoke.mjs",
+    "fixtures": "node scripts/gen-fixtures.mjs",
+    "check:coverage": "node scripts/check-coverage.mjs",
     "format": "prettier --write \"**/*.{ts,mjs,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,mjs,json,md,yaml,yml}\"",
     "pack:mcpb": "node scripts/build.mjs && node scripts/pack.mjs"
@@ -28,7 +30,7 @@
     "@modelcontextprotocol/sdk": "1.29.0",
     "@types/node": "^24.0.0",
     "esbuild": "0.28.1",
-    "prettier": "^3.4.2",
+    "prettier": "3.8.4",
     "typescript": "6.0.3"
   }
 }

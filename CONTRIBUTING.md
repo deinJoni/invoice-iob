@@ -24,14 +24,19 @@ pnpm install           # installs the workspace (pnpm 10.32)
 The exact root scripts (run from the repo root):
 
 ```bash
-pnpm run build         # esbuild → single self-contained dist/bundle/server/index.mjs
-pnpm run typecheck     # tsc --noEmit -p tsconfig.json  (the CI type source of truth)
-pnpm test              # node --test "packages/**/*.test.ts"  (unit tests)
-pnpm run smoke         # build + drive the bundled server over a real MCP stdio handshake
-pnpm run pack:mcpb     # build + mcpb pack → dist/invoice-iob.mcpb
-pnpm run format        # prettier --write
-pnpm run format:check  # prettier --check (run before you push)
+pnpm run build          # esbuild → single self-contained dist/bundle/server/index.mjs
+pnpm run typecheck      # tsc --noEmit -p tsconfig.json  (the CI type source of truth)
+pnpm test               # node --test  (unit tests + the report-parser gate tests)
+pnpm run check:coverage # drift guard: every registered format maps to a CI gate (needs build)
+pnpm run smoke          # build + drive the bundled server over a real MCP stdio handshake
+pnpm run fixtures       # generate one conformance fixture per path × example (needs build)
+pnpm run pack:mcpb      # build + mcpb pack → dist/invoice-iob.mcpb
+pnpm run format         # prettier --write
+pnpm run format:check   # prettier --check (enforced in CI — run before you push)
 ```
+
+To run the official validators locally exactly as CI does (KoSIT, EN 16931 Schematron, Mustang),
+see [`docs/CI.md`](docs/CI.md) → "Running the validators locally".
 
 A few load-bearing facts worth internalizing early:
 
@@ -41,7 +46,7 @@ A few load-bearing facts worth internalizing early:
 - **The canonical model is the single source of truth.** Renderers read amounts from it and
   **never recompute** VAT or totals — that's how the XML and the PDF can never disagree.
 - **Typecheck is separate from the build.** esbuild strips types and never checks them; `tsc
-  --noEmit` is the authority. The bundle is built, not type-emitted.
+--noEmit` is the authority. The bundle is built, not type-emitted.
 
 ## Repo layout
 
@@ -96,10 +101,12 @@ the engine adapter).
 - Branch off the default branch; never commit directly to it.
 - Keep commits focused and the message imperative ("Add FatturaPA provider", not "added stuff").
 - Before opening a PR, make the local gate pass: `pnpm run format:check && pnpm run typecheck &&
-  pnpm test`. For anything that touches the server or a renderer, also run `pnpm run smoke`.
-- Open a PR against the default branch. CI runs install → format:check → typecheck → test → build →
-  pack, plus the official validators for any format that has one (see the merge gate below). Fill in
-  the PR template and link the relevant issue.
+pnpm test`. For anything that touches the server, a renderer, or the format set, also run
+  `pnpm run smoke` and `pnpm run check:coverage`.
+- Open a PR against the default branch. CI runs format:check → typecheck → test → build → **coverage
+  drift guard** → pack → smoke on a Node 20/22/24 matrix, plus the official-validator gates (KoSIT,
+  EN 16931 Schematron, Mustang/veraPDF) for every output path × example (see the merge gate below
+  and [`docs/CI.md`](docs/CI.md)). Fill in the PR template and link the relevant issue.
 - A maintainer (and the format's `CODEOWNERS` entry, if it has one) reviews. Green CI + an approval
   lands it.
 
@@ -118,14 +125,14 @@ Add a `packages/format-<country>/` package that exports a provider implementing 
   (`'UBL' | 'CII' | 'PDF' | 'hybrid' | …`), `outputKind` (`'xml' | 'pdf' | 'hybrid'`), optional
   `profiles` / `defaultProfile`, `fileExtension`, `mimeType`, `requires?`, and — read honestly —
   **`bundleable: boolean`**.
-- **`validate(model, profile?): ValidationResult`** — a *cheap pre-flight*, **not** the
+- **`validate(model, profile?): ValidationResult`** — a _cheap pre-flight_, **not** the
   authoritative validator. Layer your country's checks on top of the shared
   `baseEn16931Issues(model)` from `@invoice-iob/core` (see `brDeIssues()` in `format-xrechnung` for
   the pattern), and return via the `validationResult(issues)` helper.
 - **`render(model, options): Promise<RenderedArtifact>`** — produce `{ bytes, mimeType, extension }`
   from the canonical model. **Choose a pure-JS engine/lib wherever one exists.** If the EU engine
   already covers your format (e.g. FR Factur-X), reuse `@invoice-iob/engine-e-invoice-eu`. If it
-  doesn't (FatturaPA, Facturae, KSeF are *not* in `@e-invoice-eu/core`), wrap a JS library — and if
+  doesn't (FatturaPA, Facturae, KSeF are _not_ in `@e-invoice-eu/core`), wrap a JS library — and if
   the only correct option needs a JVM / Go runtime / external binary, set **`bundleable: false`** and
   declare what it `requires`. **Never recompute amounts** — read them off the model.
 
@@ -145,19 +152,34 @@ remember the **LibreOffice-avoidance rule**: for Factur-X/ZUGFeRD **always pass 
 **never** `options.spreadsheet` / `options.libreOfficePath` — that is the only thing that spawns
 LibreOffice. XML formats never touch it.
 
-### 4. Add conformance fixtures + wire the official validator into CI
+### 4. Map your path into the validation matrix (this is what makes CI validate it)
 
-- Ship **conformance fixtures** (sample inputs + expected artifacts). The smoke harness
-  (`scripts/smoke.mjs`) is the pattern for generating them: it spawns the bundle and drives it via
-  the MCP SDK client.
-- Wire the **official validator** for your format into CI:
-  - **XRechnung / EN 16931 XML** → **KoSIT validator** (1.6.2) with
-    `validator-configuration-xrechnung`. **Footgun:** KoSIT exits 0 even for INVALID invoices — you
-    MUST parse its XML report (VARL): assert `<rep:assessment>` contains `<rep:accept>` and there
-    are zero `<rep:message level="error">`. Never trust the exit code. (See `scripts/kosit-check.mjs`.)
-  - **Hybrid PDF/A-3** → **veraPDF** (`-f 3b`, `isCompliant=true`, `failedChecks=0`) **plus** the
-    **ZUGFeRD / Mustangproject** validator (`--action validate`, `status=valid`, profile matches).
-  - Other nationals → their official conformance check (e.g. SdI for FatturaPA) where one exists.
+CI validates **every output path × every example** against an official validator on every push, all
+driven by one file: [`scripts/lib/matrix.mjs`](scripts/lib/matrix.mjs). The **drift guard**
+(`pnpm run check:coverage`) fails until your new format has a row there — so this step is not
+optional. Full runbook: [`docs/CI.md`](docs/CI.md) → "Adding a new path".
+
+- **Add a `FORMAT_COVERAGE` row** keyed by your provider's canonical `meta.id`, pointing at the gate
+  that proves its conformance:
+  - an XRechnung-like CIUS → `gate: 'kosit'`;
+  - generic EN 16931 XML → `gate: 'en16931'` (set `syntax: 'UBL' | 'CII'` — validated against the
+    CEN Schematron via Saxon-HE);
+  - a ZUGFeRD/Factur-X hybrid → `gate: 'mustang'` (list its `profiles`, and any `embeddedKosit`
+    profiles whose embedded XML should also pass KoSIT);
+  - a visual-only artifact with no formal validator → `gate: 'smoke'` (add structural checks to
+    `scripts/smoke.mjs`).
+- **No fixtures to hand-author** — [`scripts/gen-fixtures.mjs`](scripts/gen-fixtures.mjs) drives the
+  bundle and emits a fixture per path × example automatically.
+- **A genuinely new validator** (e.g. SdI for FatturaPA)? Add a pinned `scripts/ci/fetch-<tool>.sh`,
+  a new gate in `GATES`, a `scripts/<tool>-check.mjs` that **parses the report, never the exit
+  code**, the parse logic + a unit test in `scripts/lib/reports.{mjs,test.mjs}`, and a CI job
+  mirroring the existing ones.
+
+**The report-not-exit-code footgun (load-bearing):** KoSIT exits `0` even for INVALID invoices
+(Saxon and Mustang have their own exit-code quirks). Always parse the validator's report — VARL
+`<rep:accept>` + zero `<rep:message level="error">` for KoSIT, zero `<svrl:failed-assert flag="fatal">`
+for the EN 16931 Schematron, `<summary status="valid">` for Mustang. The unit-tested parsers in
+`scripts/lib/reports.mjs` guarantee a gate can never silently become an always-pass.
 
 ### 5. Register the provider + compose it in the server
 

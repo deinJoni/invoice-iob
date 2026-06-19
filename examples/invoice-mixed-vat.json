@@ -1,0 +1,59 @@
+{
+  "format": "ZUGFERD",
+  "invoiceNumber": "2026-0188",
+  "issueDate": "2026-06-19",
+  "dueDate": "2026-07-10",
+  "currency": "EUR",
+  "buyerReference": "991-04011000-25",
+  "note": "Leistungszeitraum Mai 2026. Vielen Dank für die Zusammenarbeit.",
+  "seller": {
+    "name": "Nordlicht Studio GmbH",
+    "vatId": "DE298765432",
+    "address": {
+      "line1": "Hafenstraße 12",
+      "city": "Hamburg",
+      "postalCode": "20359",
+      "countryCode": "DE"
+    },
+    "contactName": "Lena Brandt",
+    "contactPhone": "+49 40 5550123",
+    "contactEmail": "rechnung@nordlicht-studio.de",
+    "electronicAddress": { "scheme": "EM", "value": "rechnung@nordlicht-studio.de" }
+  },
+  "buyer": {
+    "name": "Aperture Labs GmbH",
+    "vatId": "DE241357986",
+    "address": {
+      "line1": "Lichtweg 4",
+      "city": "München",
+      "postalCode": "80807",
+      "countryCode": "DE"
+    },
+    "electronicAddress": { "scheme": "EM", "value": "ap@aperture.example" }
+  },
+  "delivery": { "periodStart": "2026-05-01", "periodEnd": "2026-05-31" },
+  "payment": {
+    "iban": "DE21200505501015872802",
+    "bic": "HASPDEHHXXX",
+    "accountName": "Nordlicht Studio GmbH",
+    "terms": "Zahlbar bis 10.07.2026 ohne Abzug."
+  },
+  "lines": [
+    {
+      "name": "Website-Relaunch",
+      "description": "Konzept, Design und technische Umsetzung",
+      "quantity": 1,
+      "unitCode": "C62",
+      "netUnitPrice": 4800,
+      "vatRate": 19
+    },
+    {
+      "name": "Gedrucktes Markenhandbuch",
+      "description": "64 Seiten, Auflage 50 Stück",
+      "quantity": 50,
+      "unitCode": "C62",
+      "netUnitPrice": 12,
+      "vatRate": 7
+    }
+  ]
+}

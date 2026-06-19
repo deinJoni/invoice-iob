@@ -1,6 +1,6 @@
 name: Bug report
 description: Something produced a wrong, invalid, or unexpected e-invoice.
-title: "[bug]: "
+title: '[bug]: '
 labels: [bug]
 body:
   - type: markdown

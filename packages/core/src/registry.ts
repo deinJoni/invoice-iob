@@ -26,9 +26,7 @@ export class FormatRegistry {
     for (const key of keys) {
       const existing = this.#byKey.get(key);
       if (existing && existing !== provider) {
-        throw new Error(
-          `Format id/alias "${key}" is already registered by "${existing.meta.id}".`,
-        );
+        throw new Error(`Format id/alias "${key}" is already registered by "${existing.meta.id}".`);
       }
       this.#byKey.set(key, provider);
     }

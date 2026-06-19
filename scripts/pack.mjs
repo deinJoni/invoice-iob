@@ -27,4 +27,6 @@ execFileSync('pnpm', ['exec', 'mcpb', 'pack', bundleDir, outFile], {
 });
 
 const { size } = await stat(outFile);
-console.log(`\n✓ packed ${outFile.replace(root + '/', '')} — ${(size / 1024 / 1024).toFixed(2)} MB`);
+console.log(
+  `\n✓ packed ${outFile.replace(root + '/', '')} — ${(size / 1024 / 1024).toFixed(2)} MB`,
+);

@@ -8,19 +8,20 @@ In 2026 the bundle format is finalized: the CLI is **`@anthropic-ai/mcpb@2.1.2`*
 
 The format was renamed from DXT (`.dxt`, "Desktop Extensions") to MCPB ("MCP Bundles", `.mcpb`).
 
-| Item | 2026 value |
-|---|---|
-| CLI package | `@anthropic-ai/mcpb` |
-| CLI version | **2.1.2** |
-| CLI license | MIT |
-| bin name | `mcpb` |
-| Old package | `@anthropic-ai/dxt@0.2.6` — **deprecated** ("renamed to @anthropic-ai/mcpb") |
-| File extension | `.mcpb` (was `.dxt`) |
-| Repo | github.com/anthropics/mcpb |
+| Item           | 2026 value                                                                   |
+| -------------- | ---------------------------------------------------------------------------- |
+| CLI package    | `@anthropic-ai/mcpb`                                                         |
+| CLI version    | **2.1.2**                                                                    |
+| CLI license    | MIT                                                                          |
+| bin name       | `mcpb`                                                                       |
+| Old package    | `@anthropic-ai/dxt@0.2.6` — **deprecated** ("renamed to @anthropic-ai/mcpb") |
+| File extension | `.mcpb` (was `.dxt`)                                                         |
+| Repo           | github.com/anthropics/mcpb                                                   |
 
 A `.mcpb` is a zip archive containing `manifest.json` + the server + its dependencies. Claude Desktop installs it with one click and runs the declared command on the user's machine.
 
 ### CLI commands
+
 ```
 mcpb init [directory]                 # interactive: writes manifest.json
 mcpb validate <path>                  # validate manifest against schema
@@ -30,6 +31,7 @@ mcpb verify <mcpb-file>               # show signature validity, cert details, f
 mcpb info <mcpb-file>                 # show file size, signature status
 mcpb unsign <mcpb-file>               # remove signature (dev)
 ```
+
 `mcpb sign` options: `--self-signed`, `--cert/-c <path>` (default cert.pem), `--key/-k <path>` (default key.pem), `--intermediate/-i <paths>`.
 
 ```bash
@@ -38,6 +40,7 @@ mcpb sign dist/invoice-iob.mcpb --self-signed         # dev / self-publish
 mcpb sign dist/invoice-iob.mcpb -c cert.pem -k key.pem -i intermediate.pem   # real cert
 mcpb verify dist/invoice-iob.mcpb
 ```
+
 CLI's own runtime deps (informational): commander, fflate (zip), node-forge (signing), galactus (prunes devDeps), ignore, @inquirer/prompts, zod ^3.25. The CLI internally pins **zod v3** — independent of your project (which uses zod 4).
 
 ## 2. Manifest schema and a complete manifest.json
@@ -59,6 +62,7 @@ CLI's own runtime deps (informational): commander, fflate (zip), node-forge (sig
 `tools` array entries `{ "name", "description" }` are declarative for the install UI; the server still advertises them at runtime. Set `tools_generated: true` if discovered at runtime.
 
 ### Complete manifest.json for invoice-iob
+
 ```json
 {
   "manifest_version": "0.3",
@@ -82,8 +86,14 @@ CLI's own runtime deps (informational): commander, fflate (zip), node-forge (sig
     }
   },
   "tools": [
-    { "name": "create_invoice", "description": "Create an EN 16931 e-invoice from structured invoice details; returns XRechnung/UBL/CII XML, a PDF, and a ZUGFeRD/Factur-X PDF/A-3, written to the configured output folder." },
-    { "name": "validate_invoice", "description": "Validate provided invoice data or XML against EN 16931 business rules and report violations." }
+    {
+      "name": "create_invoice",
+      "description": "Create an EN 16931 e-invoice from structured invoice details; returns XRechnung/UBL/CII XML, a PDF, and a ZUGFeRD/Factur-X PDF/A-3, written to the configured output folder."
+    },
+    {
+      "name": "validate_invoice",
+      "description": "Validate provided invoice data or XML against EN 16931 business rules and report violations."
+    }
   ],
   "tools_generated": false,
   "user_config": {
@@ -101,9 +111,20 @@ CLI's own runtime deps (informational): commander, fflate (zip), node-forge (sig
     "platforms": ["darwin", "win32", "linux"],
     "runtimes": { "node": ">=18.0.0" }
   },
-  "keywords": ["invoice", "e-invoice", "EN16931", "XRechnung", "ZUGFeRD", "Factur-X", "UBL", "CII", "PDF/A-3"]
+  "keywords": [
+    "invoice",
+    "e-invoice",
+    "EN16931",
+    "XRechnung",
+    "ZUGFeRD",
+    "Factur-X",
+    "UBL",
+    "CII",
+    "PDF/A-3"
+  ]
 }
 ```
+
 - Output folder is captured via the `output_directory` directory config and passed via `env.INVOICE_IOB_OUTPUT_DIR`. The server reads `process.env.INVOICE_IOB_OUTPUT_DIR`.
 - `runtimes.node >=18` matches the SDK's engine requirement.
 - Keep `icon.png` (square, ~256–512px) at the bundle root.
@@ -111,10 +132,12 @@ CLI's own runtime deps (informational): commander, fflate (zip), node-forge (sig
 ## 3. Bundling a Node server, size, and signing
 
 **Two strategies; pick single-file esbuild:**
-1. *Ship `node_modules`*: `mcpb pack` zips the whole directory; the CLI runs `galactus` to prune dev deps, but the tree is large (10–40MB+).
-2. *Single esbuild file (recommended)*: bundle to one file `server/index.js` (`esbuild --bundle --platform=node ...`). The packed dir is essentially `manifest.json` + `server/index.js` + data assets (OFL font, sRGB ICC if used, icon). Smallest/fastest.
+
+1. _Ship `node_modules`_: `mcpb pack` zips the whole directory; the CLI runs `galactus` to prune dev deps, but the tree is large (10–40MB+).
+2. _Single esbuild file (recommended)_: bundle to one file `server/index.js` (`esbuild --bundle --platform=node ...`). The packed dir is essentially `manifest.json` + `server/index.js` + data assets (OFL font, sRGB ICC if used, icon). Smallest/fastest.
 
 esbuild details:
+
 - Assets can be inlined via esbuild `loader: 'binary'` (preferred, fully self-contained) OR shipped as files next to the entry and resolved via `__dirname`. (See build doc — binary loader recommended.)
 - Engine deps are all pure JS and esbuild-bundleable. No native addons.
 - Keep `node` as the `command`. Do NOT ship a Node binary.
@@ -122,6 +145,7 @@ esbuild details:
 Size: a single-file build is a few MB of JS plus the font/ICC — expect a packed `.mcpb` in the low single-digit MB range.
 
 **Signing (do it — finance tool):**
+
 - `mcpb sign <file> --self-signed` for dev; Claude Desktop shows the publisher as self-signed but still verifies the archive wasn't tampered with.
 - A real code-signing cert (`--cert/--key/--intermediate`) lets Claude Desktop display a verified publisher identity — materially raises trust for a tax-document tool.
 - CI flow: `mcpb pack` → `mcpb sign` (real cert from CI secrets, `--self-signed` for nightlies) → `mcpb verify` as a gate → attach to GitHub release.
@@ -131,6 +155,7 @@ Size: a single-file build is a few MB of JS plus the font/ICC — expect a packe
 The single esbuild artifact `server/index.js` is the only thing every client runs. The universal invocation is `node <abs path>/server/index.js`.
 
 ### A. Claude Code — `claude mcp add`
+
 ```bash
 claude mcp add invoice-iob \
   --scope project \
@@ -138,28 +163,35 @@ claude mcp add invoice-iob \
   --env INVOICE_IOB_OUTPUT_DIR=/Users/you/Invoices \
   -- node /abs/path/to/dist/bundle/server/index.js
 ```
+
 - `--scope`: `local` (default), `project` (writes `.mcp.json`), `user` (`~/.claude.json`).
 - The `--` separator is mandatory for stdio — everything after it is the server command.
 - `--env KEY=value` may be repeated; keep another option between `--env` and the server name.
 
 ### B. Claude Code project config — `.mcp.json`
+
 ```json
 {
   "mcpServers": {
     "invoice-iob": {
       "command": "node",
       "args": ["/abs/path/to/dist/bundle/server/index.js"],
-      "env": { "INVOICE_IOB_OUTPUT_DIR": "${INVOICE_IOB_OUTPUT_DIR:-${CLAUDE_PROJECT_DIR:-.}/invoices}" }
+      "env": {
+        "INVOICE_IOB_OUTPUT_DIR": "${INVOICE_IOB_OUTPUT_DIR:-${CLAUDE_PROJECT_DIR:-.}/invoices}"
+      }
     }
   }
 }
 ```
+
 - Claude Code expands env vars; provide defaults (`${VAR:-default}`) for project/user scope.
 - Optional per-server `"timeout": 600000` (ms) for long PDF/A-3 assembly. `"type"` may be `"stdio"` (inferred from command+args).
 - Project-scoped servers require interactive approval on first use.
 
 ### C. Claude Desktop manual config — `claude_desktop_config.json`
+
 Same `mcpServers` schema. macOS `~/Library/Application Support/Claude/claude_desktop_config.json`, Windows `%APPDATA%\Claude\claude_desktop_config.json`.
+
 ```json
 {
   "mcpServers": {
@@ -173,11 +205,13 @@ Same `mcpServers` schema. macOS `~/Library/Application Support/Claude/claude_des
 ```
 
 ### D. Generic / other adapters (Cursor, VS Code, any MCP client)
+
 - **Cursor**: `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global), same `mcpServers` shape.
 - **VS Code (Copilot/Agent MCP)**: `.vscode/mcp.json`, top-level key is `servers` (not `mcpServers`), same `{ command, args, env }`; supports `inputs` for prompting values.
 - **Generic clients**: document the literal launch command `node /abs/path/to/server/index.js` with env `INVOICE_IOB_OUTPUT_DIR`.
 
 ### What the monorepo should produce
+
 1. **`dist/bundle/server/index.js`** — the single esbuild bundle (every client runs this).
 2. **Bundle assets** alongside it (or inlined): OFL font, sRGB ICC if used, icon.png.
 3. **`manifest.json`** → `mcpb pack dist/bundle invoice-iob.mcpb` → `mcpb sign ...` ⇒ **`invoice-iob.mcpb`** (Claude Desktop one-click; GitHub release asset).
@@ -199,10 +233,10 @@ Validators (KoSIT, veraPDF, Mustang) stay CI/dev-only and are never referenced i
 
 ## Packages
 
-| name | version | license | role |
-|---|---|---|---|
-| @anthropic-ai/mcpb | 2.1.2 | MIT | CLI to init/validate/pack/sign/verify MCP Bundles. Build/CI only. |
-| @anthropic-ai/dxt | 0.2.6 | MIT | DEPRECATED predecessor — do not use. |
+| name               | version | license | role                                                              |
+| ------------------ | ------- | ------- | ----------------------------------------------------------------- |
+| @anthropic-ai/mcpb | 2.1.2   | MIT     | CLI to init/validate/pack/sign/verify MCP Bundles. Build/CI only. |
+| @anthropic-ai/dxt  | 0.2.6   | MIT     | DEPRECATED predecessor — do not use.                              |
 
 ## Risks
 

@@ -15,7 +15,7 @@ export interface EngineLogger {
 
 function write(level: string, args: unknown[]): void {
   const parts = args.map((a) =>
-    typeof a === 'string' ? a : a instanceof Error ? a.stack ?? a.message : safeStringify(a),
+    typeof a === 'string' ? a : a instanceof Error ? (a.stack ?? a.message) : safeStringify(a),
   );
   process.stderr.write(`[e-invoice-eu:${level}] ${parts.join(' ')}\n`);
 }

@@ -70,7 +70,9 @@ const ublName = files.find((f) => f.includes('xrechnung-ubl'));
 if (ciiName) {
   const xml = await readFile(join(outDir, ciiName), 'utf8');
   /CrossIndustryInvoice/.test(xml) ? ok('CII: CrossIndustryInvoice root') : fail('CII: wrong root');
-  xml.includes('xrechnung_3.0') ? ok('CII: XRechnung 3.0 CustomizationID') : fail('CII: missing XRechnung URN');
+  xml.includes('xrechnung_3.0')
+    ? ok('CII: XRechnung 3.0 CustomizationID')
+    : fail('CII: missing XRechnung URN');
   xml.includes('3676.98') ? ok('CII: grand total 3676.98 present') : fail('CII: total missing');
   xml.includes('DE123456789') ? ok('CII: seller VAT id present') : fail('CII: seller VAT missing');
 } else fail('no xrechnung-cii file written');
@@ -86,7 +88,9 @@ if (pdfName) {
   const tail = buf.subarray(-1024).toString('latin1');
   head.startsWith('%PDF-1.') ? ok(`PDF: valid header (${head.trim()})`) : fail('PDF: bad header');
   tail.includes('%%EOF') ? ok('PDF: %%EOF trailer present') : fail('PDF: no %%EOF');
-  buf.length > 8000 ? ok(`PDF: ${(buf.length / 1024).toFixed(1)} KB (fonts embedded)`) : fail(`PDF: too small (${buf.length} B)`);
+  buf.length > 8000
+    ? ok(`PDF: ${(buf.length / 1024).toFixed(1)} KB (fonts embedded)`)
+    : fail(`PDF: too small (${buf.length} B)`);
 } else fail('no PDF file written');
 
 // ZUGFeRD / Factur-X hybrid PDF/A-3 (P2 de-risk): the engine must embed factur-x.xml as an
@@ -95,11 +99,21 @@ const zugferdName = files.find((f) => f.includes('zugferd'));
 if (zugferdName) {
   const buf = await readFile(join(outDir, zugferdName));
   const raw = buf.toString('latin1');
-  buf.subarray(0, 8).toString('latin1').startsWith('%PDF-') ? ok('ZUGFeRD: valid PDF') : fail('ZUGFeRD: bad PDF');
-  raw.includes('factur-x.xml') ? ok('ZUGFeRD: factur-x.xml embedded') : fail('ZUGFeRD: factur-x.xml NOT embedded');
-  raw.includes('AFRelationship') || /\/AF[\s/<\[]/.test(raw) ? ok('ZUGFeRD: Associated File (/AF) present') : fail('ZUGFeRD: no /AF');
-  raw.includes('pdfaid') ? ok('ZUGFeRD: PDF/A XMP (pdfaid) present') : fail('ZUGFeRD: no PDF/A XMP');
-  buf.length > 20000 ? ok(`ZUGFeRD: ${(buf.length / 1024).toFixed(1)} KB hybrid PDF/A-3`) : fail('ZUGFeRD: too small');
+  buf.subarray(0, 8).toString('latin1').startsWith('%PDF-')
+    ? ok('ZUGFeRD: valid PDF')
+    : fail('ZUGFeRD: bad PDF');
+  raw.includes('factur-x.xml')
+    ? ok('ZUGFeRD: factur-x.xml embedded')
+    : fail('ZUGFeRD: factur-x.xml NOT embedded');
+  raw.includes('AFRelationship') || /\/AF[\s/<\[]/.test(raw)
+    ? ok('ZUGFeRD: Associated File (/AF) present')
+    : fail('ZUGFeRD: no /AF');
+  raw.includes('pdfaid')
+    ? ok('ZUGFeRD: PDF/A XMP (pdfaid) present')
+    : fail('ZUGFeRD: no PDF/A XMP');
+  buf.length > 20000
+    ? ok(`ZUGFeRD: ${(buf.length / 1024).toFixed(1)} KB hybrid PDF/A-3`)
+    : fail('ZUGFeRD: too small');
 } else fail('no zugferd file written');
 
 // 5. negative case: missing buyerReference must fail XRechnung (BR-DE-15)
@@ -112,5 +126,7 @@ badRes.isError && /BR-DE-15/.test(badRes.content?.[0]?.text ?? '')
 
 await client.close();
 console.log(`\noutput dir: ${outDir}`);
-console.log(failures === 0 ? '\n✅ SMOKE TEST PASSED' : `\n❌ SMOKE TEST FAILED (${failures} failures)`);
+console.log(
+  failures === 0 ? '\n✅ SMOKE TEST PASSED' : `\n❌ SMOKE TEST FAILED (${failures} failures)`,
+);
 process.exit(failures === 0 ? 0 : 1);

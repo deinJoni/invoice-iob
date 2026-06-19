@@ -11,11 +11,13 @@
 - **Use `registerTool`, not `.tool()`.** All `.tool()`/`.resource()`/`.prompt()` overloads are `@deprecated`. `registerTool` wires both list+call handlers and does input/output validation for you.
 
 ### Exact import statements (verified to resolve + run)
+
 ```ts
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as z from "zod/v4";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as z from 'zod/v4';
 ```
+
 Note the mandatory `.js` extension. `McpServer` is NOT re-exported from the package root. `StdioServerTransport` constructor is `(stdin?: Readable, stdout?: Writable)` — default no-arg uses `process.stdin`/`process.stdout`.
 
 (Caution: web summaries occasionally abbreviate the path to `@modelcontextprotocol/server` — WRONG. The real package is `@modelcontextprotocol/sdk`.)
@@ -23,6 +25,7 @@ Note the mandatory `.js` extension. `McpServer` is NOT re-exported from the pack
 ## 2. Input schemas: raw Zod shape, Zod v3 vs v4
 
 `registerTool` real signature:
+
 ```ts
 registerTool<OutputArgs extends ZodRawShapeCompat | AnySchema,
              InputArgs extends undefined | ZodRawShapeCompat | AnySchema = undefined>(
@@ -38,75 +41,91 @@ registerTool<OutputArgs extends ZodRawShapeCompat | AnySchema,
   cb: ToolCallback<InputArgs>
 ): RegisteredTool;
 ```
+
 - `inputSchema`/`outputSchema` accept `ZodRawShapeCompat` (= `Record<string, AnySchema>`, a RAW shape like `{ name: z.string() }`) OR an `AnySchema`. Idiomatic form is the **raw shape**: `inputSchema: { format: z.enum([...]), total: z.number() }`. For zero-arg tools pass `inputSchema: {}`.
 - **Zod compat is built in.** `zod-compat.d.ts`: `export type AnySchema = z3.ZodTypeAny | z4.$ZodType;`. The dep/peer range is `zod: "^3.25 || ^4.0"`. **Pin Zod v4 (4.4.3) and import `import * as z from "zod/v4"`** (exactly what the SDK README uses). The handler arg type is inferred from the shape (`ShapeOutput<Args>`).
 
 ### Complete minimal working server (typechecked + verified over stdio)
-```ts
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as z from "zod/v4";
 
-const log = (...a: unknown[]) => console.error("[invoice-iob]", ...a); // stderr only
+```ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as z from 'zod/v4';
+
+const log = (...a: unknown[]) => console.error('[invoice-iob]', ...a); // stderr only
 
 const server = new McpServer(
-  { name: "invoice-iob", version: "0.1.0" },
-  { capabilities: { tools: {}, logging: {} } }
+  { name: 'invoice-iob', version: '0.1.0' },
+  { capabilities: { tools: {}, logging: {} } },
 );
 
-const FORMATS = ["xrechnung-ubl", "xrechnung-cii", "ubl", "cii", "factur-x"] as const;
+const FORMATS = ['xrechnung-ubl', 'xrechnung-cii', 'ubl', 'cii', 'factur-x'] as const;
 
 server.registerTool(
-  "list_formats",
+  'list_formats',
   {
-    title: "List supported e-invoice formats",
-    description: "Returns the EN 16931 output formats this server can produce.",
-    inputSchema: {},                              // zero-arg tool
-    outputSchema: { formats: z.array(z.string()) }
+    title: 'List supported e-invoice formats',
+    description: 'Returns the EN 16931 output formats this server can produce.',
+    inputSchema: {}, // zero-arg tool
+    outputSchema: { formats: z.array(z.string()) },
   },
   async () => {
     const structured = { formats: [...FORMATS] };
     return {
-      content: [{ type: "text", text: JSON.stringify(structured, null, 2) }],
-      structuredContent: structured              // must match outputSchema
+      content: [{ type: 'text', text: JSON.stringify(structured, null, 2) }],
+      structuredContent: structured, // must match outputSchema
     };
-  }
+  },
 );
 
 server.registerTool(
-  "create_invoice",
+  'create_invoice',
   {
-    title: "Create an EN 16931 e-invoice",
-    description: "Generates an e-invoice document in the requested format.",
-    inputSchema: {                               // RAW zod shape, not z.object(...)
-      format: z.enum(FORMATS).describe("Target output format."),
+    title: 'Create an EN 16931 e-invoice',
+    description: 'Generates an e-invoice document in the requested format.',
+    inputSchema: {
+      // RAW zod shape, not z.object(...)
+      format: z.enum(FORMATS).describe('Target output format.'),
       seller: z.string().min(1),
       buyer: z.string().min(1),
-      total: z.number().positive()
+      total: z.number().positive(),
     },
-    outputSchema: { format: z.string(), filename: z.string(), bytes: z.number() }
+    outputSchema: { format: z.string(), filename: z.string(), bytes: z.number() },
   },
-  async ({ format, seller, buyer, total }) => {  // args fully typed from shape
+  async ({ format, seller, buyer, total }) => {
+    // args fully typed from shape
     try {
       if (total > 1_000_000) {
-        return { content: [{ type: "text", text: `Refusing: total ${total} exceeds limit.` }], isError: true };
+        return {
+          content: [{ type: 'text', text: `Refusing: total ${total} exceeds limit.` }],
+          isError: true,
+        };
       }
       const filename = `invoice-${format}.xml`;
       const structured = { format, filename, bytes: 1234 };
-      log("created", filename);
-      return { content: [{ type: "text", text: `Created ${filename}` }], structuredContent: structured };
+      log('created', filename);
+      return {
+        content: [{ type: 'text', text: `Created ${filename}` }],
+        structuredContent: structured,
+      };
     } catch (err) {
-      return { content: [{ type: "text", text: `Generation failed: ${(err as Error).message}` }], isError: true };
+      return {
+        content: [{ type: 'text', text: `Generation failed: ${(err as Error).message}` }],
+        isError: true,
+      };
     }
-  }
+  },
 );
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log("ready on stdio");
+  log('ready on stdio');
 }
-main().catch((e) => { log("fatal", e); process.exit(1); });
+main().catch((e) => {
+  log('fatal', e);
+  process.exit(1);
+});
 ```
 
 ## 3. Structured content / outputSchema / content types / errors
@@ -121,6 +140,7 @@ main().catch((e) => { log("fatal", e); process.exit(1); });
 ## 4. Hard rule: stdout = JSON-RPC, logs = stderr
 
 A stdio MCP server's stdout is the newline-delimited JSON-RPC channel; ANY stray write to stdout corrupts the stream and the client hangs on `connect()`. **Never use `console.log` / `process.stdout.write` for diagnostics — use `console.error` (stderr).**
+
 - `server.sendLoggingMessage(params, sessionId?)` — emits an MCP `notifications/message` log to the CLIENT (requires `capabilities.logging: {}`); travels over the protocol, safe.
 - For local diagnostics, `console.error`. If using pino/winston, set the destination to `process.stderr` (fd 2).
 
@@ -145,11 +165,11 @@ A stdio MCP server's stdout is the newline-delimited JSON-RPC channel; ANY stray
 
 ## Packages
 
-| name | version | license | purpose |
-|---|---|---|---|
-| @modelcontextprotocol/sdk | 1.29.0 | MIT | MCP server/client SDK; McpServer + registerTool + StdioServerTransport. ~800KB single .mjs after bundling. |
-| zod | 4.4.3 | MIT | Tool input/output schemas as raw shapes; import via `zod/v4`. |
-| zod-to-json-schema | 3.25.2 | ISC | Transitive (SDK converts schemas to JSON Schema). Do NOT add directly. |
+| name                      | version | license | purpose                                                                                                    |
+| ------------------------- | ------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| @modelcontextprotocol/sdk | 1.29.0  | MIT     | MCP server/client SDK; McpServer + registerTool + StdioServerTransport. ~800KB single .mjs after bundling. |
+| zod                       | 4.4.3   | MIT     | Tool input/output schemas as raw shapes; import via `zod/v4`.                                              |
+| zod-to-json-schema        | 3.25.2  | ISC     | Transitive (SDK converts schemas to JSON Schema). Do NOT add directly.                                     |
 
 ## Risks
 

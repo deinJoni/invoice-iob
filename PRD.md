@@ -17,7 +17,7 @@ German/EU market — **XML** (XRechnung/UBL/CII), a **human-readable PDF**, and 
 on the user's own machine; **no invoice data ever leaves the computer**. It ships as a one-click
 `.mcpb` for Claude Desktop — no config files, no runtimes to install.
 
-Two audiences shape every decision: the **end user** (types *"make me an invoice"* and gets a
+Two audiences shape every decision: the **end user** (types _"make me an invoice"_ and gets a
 valid file) and the **contributor** (adds a country by implementing one interface, not by
 patching the core).
 
@@ -26,6 +26,7 @@ patching the core).
 ## 2. Goals / Non-goals
 
 **Goals**
+
 - Generate EN 16931 **XML**, a **visual PDF**, and **ZUGFeRD/Factur-X** — fully locally.
 - Ship as a **one-click, self-contained `.mcpb`** (Node-only; no native runtimes bundled).
 - **Extensible by design:** adding a new country/format is a self-contained plugin against a
@@ -35,6 +36,7 @@ patching the core).
 - Keep visual document and XML derived from a **single source of truth** so they never disagree.
 
 **Non-goals (for now)**
+
 - Peppol/network transmission, real-time/CTC reporting — out of scope (not needed for the DE
   model; may arrive later as optional providers).
 - Spanish **VeriFactu** software compliance — a separate workstream; do not conflate.
@@ -48,7 +50,7 @@ patching the core).
   reporting. Receiving e-invoices is already required; issuing becomes mandatory in 2027–2028.
   **Both pure XRechnung XML and ZUGFeRD/Factur-X hybrid are accepted.**
 - Engineering takeaway: generate XRechnung/UBL/CII and/or ZUGFeRD, save locally — that fully
-  covers the German mandate. No transmission/signature/reporting layer is required *for DE*.
+  covers the German mandate. No transmission/signature/reporting layer is required _for DE_.
   Other countries (e.g. ES/IT signatures, PL clearance) bring their own requirements, handled
   per-provider (§7).
 
@@ -56,10 +58,10 @@ patching the core).
 
 ## 4. Users & scenarios
 
-- **End user:** *"Create a ZUGFeRD invoice for 20 h consulting at €150/h for Globex DE GmbH."*
+- **End user:** _"Create a ZUGFeRD invoice for 20 h consulting at €150/h for Globex DE GmbH."_
   → hybrid PDF/A-3 saved locally.
-- **End user:** *"Give me the XRechnung XML."* → standalone XML for a B2G portal.
-- **Contributor:** *"Add Italian FatturaPA."* → implements a `FormatProvider`, supplies
+- **End user:** _"Give me the XRechnung XML."_ → standalone XML for a B2G portal.
+- **Contributor:** _"Add Italian FatturaPA."_ → implements a `FormatProvider`, supplies
   fixtures + validator wiring, opens a PR; the format then shows up in `list_formats`.
 
 ---
@@ -67,19 +69,19 @@ patching the core).
 ## 5. Scope — formats
 
 `create_invoice` selects output via a `format` option. **Formats are registry-driven** (§6.1),
-so this table is the *launch set*, not a fixed ceiling:
+so this table is the _launch set_, not a fixed ceiling:
 
-| Value             | Output                              | Embedded XML | Bundleable |
-| ----------------- | ----------------------------------- | ------------ | ---------- |
-| `XRECHNUNG-UBL`   | XML                                 | n/a          | ✅          |
-| `XRECHNUNG-CII`   | XML                                 | n/a          | ✅          |
-| `UBL` / `CII`     | XML (generic EN 16931, EU-wide)     | n/a          | ✅          |
-| `PDF`             | Visual PDF only                     | No           | ✅          |
-| `ZUGFERD` / `FACTUR-X` | Hybrid PDF/A-3                  | Yes (CII)    | ✅          |
+| Value                  | Output                          | Embedded XML | Bundleable |
+| ---------------------- | ------------------------------- | ------------ | ---------- |
+| `XRECHNUNG-UBL`        | XML                             | n/a          | ✅         |
+| `XRECHNUNG-CII`        | XML                             | n/a          | ✅         |
+| `UBL` / `CII`          | XML (generic EN 16931, EU-wide) | n/a          | ✅         |
+| `PDF`                  | Visual PDF only                 | No           | ✅         |
+| `ZUGFERD` / `FACTUR-X` | Hybrid PDF/A-3                  | Yes (CII)    | ✅         |
 
 - Hybrid output takes a **profile** sub-option, default **EN 16931 (Comfort)**. `MINIMUM` /
   `BASIC-WL` are **not** accepted as standalone compliant e-invoices — not offered as a default.
-  *(Confirm against current BMF profile guidance before launch.)*
+  _(Confirm against current BMF profile guidance before launch.)_
 - See §9.4 for the **living support matrix** (planned countries/formats).
 
 ---
@@ -87,14 +89,16 @@ so this table is the *launch set*, not a fixed ceiling:
 ## 6. Functional requirements
 
 ### 6.1 Tool surface
+
 - **`create_invoice`** — build an invoice in the chosen `format`/`profile` from simple fields
   and save it locally; compute VAT subtotals and totals automatically.
 - **`list_formats`** — enumerate the formats **available in the current build** (reads the
   registry; filters by availability), with country, output kind, and profiles.
-- **`validate_invoice`** *(later, optional)* — validate an existing file where a JS validator
+- **`validate_invoice`** _(later, optional)_ — validate an existing file where a JS validator
   exists (subject to bundling constraints; §10).
 
 ### 6.2 Input (friendly fields, extensible)
+
 Core fields: seller, buyer, invoice number, issue date, optional due date, currency, buyer
 reference / Leitweg-ID, line items (description, qty, unit price, unit code, VAT rate), optional
 payment (IBAN/BIC), optional note, `format`, `profile`. The input schema carries a **typed core
@@ -102,6 +106,7 @@ plus an open extension area** so country-specific fields (e.g. Italian SdI codes
 Facturae specifics) can be added by a provider without breaking the core schema.
 
 ### 6.3 Visual document content (DE launch: Pflichtangaben, §14 UStG)
+
 The visual PDF MUST render: supplier + recipient name/address; supplier **USt-IdNr** (or
 Steuernummer); invoice number + issue date; time of supply (Lieferdatum) or period; line items;
 **VAT breakdown by rate** plus exemption note where applicable; totals (net, VAT, gross/payable);
@@ -109,10 +114,12 @@ payment terms + bank details when provided; buyer reference where present. Manda
 are **per-country/locale** (driven by the active provider + template), not hard-coded to DE.
 
 ### 6.4 Consistency
+
 For hybrid output, page values and embedded-XML values MUST be identical — both derived from
 the **same canonical invoice object** (§7.1). Renderers must not recompute amounts.
 
 ### 6.5 File output & configuration
+
 - Save to a user-chosen output folder (set once at install; default `~/Documents/E-Invoices`).
   Filename `<invoiceNumber>-<format>.{xml|pdf}`.
 - Hybrid output: the single PDF is the deliverable (XML embedded); optionally also emit
@@ -135,6 +142,7 @@ friendly input ─▶ Input Mapper ─▶ Canonical Invoice Model ─▶ Format 
 ```
 
 ### 7.1 Canonical invoice model (single source of truth)
+
 A **normalized, semantic** invoice representation, based on the **EN 16931 business-term model
 (BT-/BG-)** as the backbone (most national formats are CIUS of, or mappable to, EN 16931). It
 holds typed core fields **plus a country-extension area** for fields outside EN 16931. Every
@@ -142,7 +150,9 @@ input maps **into** it; every output renders **from** it. This decouples input, 
 output, and is what guarantees XML↔PDF consistency.
 
 ### 7.2 Format provider interface (the extension point)
+
 Each output format is a **`FormatProvider`** declaring:
+
 - **Metadata:** `id` (e.g. `xrechnung-ubl`, `zugferd`, `fatturapa`), `country` (ISO),
   `standard` (EN 16931 / national), `syntax` (UBL / CII / national-XML / PDF / hybrid),
   available `profiles`, `outputKind` (xml / pdf / hybrid), **`bundleable`** (pure-JS vs needs a
@@ -154,27 +164,32 @@ Each output format is a **`FormatProvider`** declaring:
   extension area.
 
 ### 7.3 Format registry
+
 Providers self-register; `create_invoice` resolves `format` → provider; `list_formats`
 enumerates the registry. A build includes a **curated set** of providers; the registry also
-advertises **availability** so the tool can tell a user *"this format needs the optional X
-add-on"* instead of failing opaquely.
+advertises **availability** so the tool can tell a user _"this format needs the optional X
+add-on"_ instead of failing opaquely.
 
 ### 7.4 Engine abstraction (no single-engine lock-in)
+
 `@e-invoice-eu/core` is the **first** engine adapter — it covers UBL/CII/XRechnung/Factur-X (and
 the PDF/A-3 assembly). Other formats need other engines/libraries (FatturaPA, Facturae, KSeF),
 so the core **must not assume one engine**. A provider brings its own engine adapter behind the
 interface.
+
 - **Hard constraint:** the default `.mcpb` stays **Node-only and one-click**. Pure-JS providers
   are bundleable. Providers that need a **JVM, Go runtime, or external binary** (e.g. some
   national engines, signature toolchains) are **opt-in / separately distributed** and excluded
   from the default bundle. The registry marks them `bundleable: false`.
 
 ### 7.5 Templates (visual output)
+
 The visual-PDF renderer is **template-driven**, with per-country/locale templates carrying the
 correct mandatory-field set and labels (DE/EN at launch). A new country can supply a template
 without touching others.
 
 ### 7.6 Distribution as packages (OSS-friendly)
+
 Target a **monorepo with a core package + per-format packages** (`core`, `format-xrechnung`,
 `format-zugferd`, …). The default bundle composes a curated set; third parties can later publish
 `invoice-iob-format-*` packages against the public `FormatProvider` interface. (Decision: start
@@ -186,12 +201,14 @@ settles — §11.)
 ## 8. Technical guidelines (runtime & build)
 
 ### 8.1 Local-first, Node-only
+
 - A **stdio MCP server** on the user's machine. stdout is the JSON-RPC channel — **all logging
   to stderr only**, or the protocol corrupts.
 - The shipped `.mcpb` must be **self-contained and Node-only** (no LibreOffice/Ghostscript/JVM/
-  Chromium). Every *launch-set* format must be reachable without a native runtime.
+  Chromium). Every _launch-set_ format must be reachable without a native runtime.
 
 ### 8.2 Build & packaging
+
 - TypeScript source; **build with esbuild**, not `tsc`.
   - Rationale (established in prototyping): `tsc` hangs resolving the Zod + MCP-SDK `.d.ts`
     graph; esbuild bundles the server + deps into a **single self-contained file in under a
@@ -201,10 +218,12 @@ settles — §11.)
   recommend **signing** the bundle for a finance tool.
 
 ### 8.3 PDF generation strategy
+
 ```
 canonical model ─┬─▶ visual PDF (pure JS)
                  └─▶ EN 16931 XML (engine) ──▶ engine.generate(format=Factur-X, pdf=<our PDF>) ─▶ ZUGFeRD/Factur-X PDF/A-3
 ```
+
 - **We render the visual PDF ourselves in pure JS.** The engine's spreadsheet→PDF path needs
   **LibreOffice** (disqualified §8.1); its **supply-a-PDF path does not** — we hand it a finished
   PDF and it embeds the XML + produces PDF/A-3. Node-only.
@@ -212,6 +231,7 @@ canonical model ─┬─▶ visual PDF (pure JS)
   Factur-X XMP.
 
 ### 8.4 PDF library, fonts, PDF/A-3
+
 - **Recommended lib:** `@cantoo/pdf-lib` (already an engine dep; PDF/A + attachments; bundles
   cleanly). Custom-font embedding via `@pdf-lib/fontkit`. Reject Chromium/puppeteer; avoid
   pdfkit's runtime font-metric files.
@@ -229,18 +249,21 @@ canonical model ─┬─▶ visual PDF (pure JS)
 ## 9. Open source
 
 ### 9.1 License
+
 Pick a permissive, contributor- and corporate-friendly license. **Recommended: Apache-2.0**
 (patent grant; matches GOBL/Mustang-style tooling) or **MIT** (simplest). Must stay compatible
 with bundled deps (engine WTFPL, SDK/pdf-lib MIT, fonts OFL — all permissive, no copyleft
 conflict). **Decision for owner (§11).**
 
 ### 9.2 Contribution model & repo hygiene
+
 - `README`, `LICENSE`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, issue/PR templates, semantic
   versioning, changelog, CI badges, `CODEOWNERS`.
 - A docs area documenting the **canonical model**, the **`FormatProvider` interface**, and the
   **support matrix**.
 
 ### 9.3 "Add a new country/format" recipe (the headline contributor flow)
+
 1. Implement a **`FormatProvider`** (metadata + `validate` + `render`), choosing a **pure-JS**
    engine/lib where possible; mark `bundleable` honestly.
 2. Fold any country-specific input into the canonical model's **extension area**
@@ -258,15 +281,15 @@ default bundle unless marked optional.
 
 ### 9.4 Support matrix (living)
 
-| Country | Format | Standard | Output | Status | Bundleable |
-| ------- | ------ | -------- | ------ | ------ | ---------- |
-| DE | XRechnung (UBL/CII) | EN 16931 CIUS | XML | **Launch** | ✅ |
-| DE | ZUGFeRD / Factur-X | EN 16931 | Hybrid PDF/A-3 | **Launch (P2)** | ✅ |
-| EU | UBL / CII | EN 16931 | XML | **Launch** | ✅ |
-| FR | Factur-X | EN 16931 | Hybrid | Near-term (engine supports) | ✅ |
-| IT | FatturaPA | National (SdI) | XML | Planned | TBD — needs JS lib |
-| ES | Facturae | National | XML (+ XAdES) | Planned | ⚠ signature toolchain |
-| PL | KSeF | National | XML | Planned | TBD |
+| Country | Format              | Standard       | Output         | Status                      | Bundleable            |
+| ------- | ------------------- | -------------- | -------------- | --------------------------- | --------------------- |
+| DE      | XRechnung (UBL/CII) | EN 16931 CIUS  | XML            | **Launch**                  | ✅                    |
+| DE      | ZUGFeRD / Factur-X  | EN 16931       | Hybrid PDF/A-3 | **Launch (P2)**             | ✅                    |
+| EU      | UBL / CII           | EN 16931       | XML            | **Launch**                  | ✅                    |
+| FR      | Factur-X            | EN 16931       | Hybrid         | Near-term (engine supports) | ✅                    |
+| IT      | FatturaPA           | National (SdI) | XML            | Planned                     | TBD — needs JS lib    |
+| ES      | Facturae            | National       | XML (+ XAdES)  | Planned                     | ⚠ signature toolchain |
+| PL      | KSeF                | National       | XML            | Planned                     | TBD                   |
 
 > FatturaPA/Facturae/KSeF are **not** in `@e-invoice-eu/core` — they require different
 > engines/libs (and ES/IT add e-signature), which is exactly why the engine abstraction (§7.4)
@@ -334,12 +357,12 @@ P0 stands up the **extensible** skeleton (requirements, not code):
 
 ## 12. Phasing / milestones
 
-| Phase | Scope | Exit gate |
-| ----- | ----- | --------- |
+| Phase                              | Scope                                                                                                                                                      | Exit gate                                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | **P0 — Extensible core + XML MVP** | Repo, build/pack, MCP skeleton, **canonical model + provider interface + registry**, XML providers (XRechnung/UBL/CII), one-click `.mcpb`, OSS scaffolding | XML passes EN 16931 (+ KoSIT) validation; one-click install; a 2nd provider proves the interface |
-| **P1 — Visual PDF** | `PDF` provider: compliant layout, embedded font, mandatory fields, totals from canonical model | Visual acceptance + totals match XML |
-| **P2 — ZUGFeRD/Factur-X** | Hybrid provider (default EN16931 profile) feeding the P1 PDF into the engine | **veraPDF 3b + ZUGFeRD validator pass + XML consistency** |
-| **P3 — Open up & grow** | Public docs site, external-plugin guide, first additional country (e.g. FR), bundle signing, marketplace listing, optional `validate_invoice` | Stable public `FormatProvider` interface; ≥ 1 extra country green in CI |
+| **P1 — Visual PDF**                | `PDF` provider: compliant layout, embedded font, mandatory fields, totals from canonical model                                                             | Visual acceptance + totals match XML                                                             |
+| **P2 — ZUGFeRD/Factur-X**          | Hybrid provider (default EN16931 profile) feeding the P1 PDF into the engine                                                                               | **veraPDF 3b + ZUGFeRD validator pass + XML consistency**                                        |
+| **P3 — Open up & grow**            | Public docs site, external-plugin guide, first additional country (e.g. FR), bundle signing, marketplace listing, optional `validate_invoice`              | Stable public `FormatProvider` interface; ≥ 1 extra country green in CI                          |
 
 ---
 
@@ -356,7 +379,7 @@ P0 stands up the **extensible** skeleton (requirements, not code):
   **Fallback:** assemble PDF/A-3 ourselves with `@cantoo/pdf-lib` (contingency).
 - **Build hang (known):** `tsc` chokes on the Zod/SDK type graph → esbuild (§8.2).
 - **Conformance drift across many formats / contributor variance.** → Per-provider CI validation
-  + fixtures as a merge gate (§9.3); CODEOWNERS per format.
+  - fixtures as a merge gate (§9.3); CODEOWNERS per format.
 - **Font licence / coverage** → permissive (OFL) subset, vendored licence.
 - **Bundle-size creep** → subset fonts, reuse the engine's pdf-lib, enforce the size cap in CI.
 

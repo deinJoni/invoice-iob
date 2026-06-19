@@ -1,18 +1,20 @@
-// Validates ZUGFeRD/Factur-X hybrid PDFs with the Mustangproject CLI (P2 gate).
+// Validates ZUGFeRD/Factur-X hybrid PDFs with the Mustangproject CLI (the hybrid gate).
 //
 // Mustang's `--action validate` is a one-stop hybrid gate: it runs an embedded veraPDF for
 // PDF/A-3b conformance AND validates the Factur-X container + the embedded factur-x.xml against
-// the EN 16931 profile. We treat a PDF as valid if Mustang's report says <summary status="valid">,
-// or (as a fallback) the process exits 0 with no "invalid" marker — Mustang's exit code is not
-// perfectly consistent across versions, so the report text is the primary signal.
+// the declared EN 16931 profile. We validate every hybrid PATH the matrix declares — i.e. every
+// example × every profile (EN16931/BASIC/EXTENDED/XRECHNUNG) — reading the fixture list from
+// dist/fixtures/manifest.json so we only touch this gate's fixtures. The verdict comes from the
+// report (<summary status="valid">), never the exit code (inconsistent across versions).
 //
 // Inputs via env:
 //   MUSTANG_JAR  — path to Mustang-CLI-<ver>.jar (Mustangproject 2.24.0)
-//   FIXTURES_DIR — directory of *.pdf hybrids to validate (default: dist/fixtures)
+//   FIXTURES_DIR — directory holding manifest.json + fixtures (default: dist/fixtures)
 import { spawnSync } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseMustangReport } from './lib/reports.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MUSTANG_JAR = process.env['MUSTANG_JAR'];
@@ -24,30 +26,38 @@ function die(msg) {
 }
 if (!MUSTANG_JAR) die('MUSTANG_JAR is not set (path to the Mustang-CLI jar).');
 
-const pdfs = (await readdir(fixturesDir))
-  .filter((f) => f.toLowerCase().endsWith('.pdf'))
-  .map((f) => join(fixturesDir, f));
-if (pdfs.length === 0) die(`No *.pdf found in ${fixturesDir}. Run scripts/gen-fixtures.mjs first.`);
+// Prefer the manifest (validate exactly this gate's fixtures); fall back to globbing *.pdf.
+async function targets() {
+  try {
+    const manifest = JSON.parse(await readFile(join(fixturesDir, 'manifest.json'), 'utf8'));
+    return manifest
+      .filter((e) => e.gate === 'mustang')
+      .map((e) => ({ file: join(fixturesDir, e.file), label: e.file, expectProfile: e.profile }));
+  } catch {
+    const pdfs = (await readdir(fixturesDir)).filter((f) => f.toLowerCase().endsWith('.pdf'));
+    return pdfs.map((f) => ({ file: join(fixturesDir, f), label: f, expectProfile: null }));
+  }
+}
+
+const pdfs = await targets();
+if (pdfs.length === 0)
+  die(`No hybrid fixtures for the mustang gate in ${fixturesDir}. Run gen-fixtures first.`);
 
 console.log(`Mustang validate over ${pdfs.length} hybrid PDF(s) — embeds veraPDF for PDF/A-3b`);
 console.log(`  jar: ${MUSTANG_JAR}\n`);
 
 let failed = 0;
-for (const pdf of pdfs) {
-  const base = basename(pdf);
-  const r = spawnSync('java', ['-jar', MUSTANG_JAR, '--action', 'validate', '--source', pdf], {
+for (const { file, label, expectProfile } of pdfs) {
+  const r = spawnSync('java', ['-jar', MUSTANG_JAR, '--action', 'validate', '--source', file], {
     encoding: 'utf8',
     cwd: root,
     maxBuffer: 64 * 1024 * 1024,
   });
   const out = `${r.stdout ?? ''}\n${r.stderr ?? ''}`;
-  const summaryValid = /<summary\b[^>]*\bstatus\s*=\s*["']valid["']/i.test(out);
-  const summaryInvalid = /<summary\b[^>]*\bstatus\s*=\s*["']invalid["']/i.test(out);
-  const profile = /\b(EN\s?16931|EXTENDED|BASIC(?:\sWL)?|MINIMUM|XRECHNUNG|COMFORT)\b/i.exec(out)?.[1];
-  // Pass if the report explicitly says valid, or it exited cleanly with no "invalid" marker.
-  const pass = summaryValid || (!summaryInvalid && r.status === 0);
+  const { profile, pass } = parseMustangReport(out, r.status);
+  const want = expectProfile ? `, want~${expectProfile}` : '';
   console.log(
-    `  ${pass ? '✓' : '✗'} ${base} — ${pass ? 'valid' : 'INVALID'} (exit=${r.status}${profile ? `, profile~${profile}` : ''})`,
+    `  ${pass ? '✓' : '✗'} ${basename(label)} — ${pass ? 'valid' : 'INVALID'} (exit=${r.status}${profile ? `, profile~${profile}` : ''}${want})`,
   );
   if (!pass) {
     failed++;
@@ -56,7 +66,14 @@ for (const pdf of pdfs) {
       .filter((l) => /error|invalid|fail|exception|not.*compliant/i.test(l))
       .slice(0, 20);
     if (lines.length) console.log(lines.map((l) => `      ${l.trim()}`).join('\n'));
-    else console.log(out.split('\n').slice(0, 20).map((l) => `      ${l}`).join('\n'));
+    else
+      console.log(
+        out
+          .split('\n')
+          .slice(0, 20)
+          .map((l) => `      ${l}`)
+          .join('\n'),
+      );
   }
 }
 

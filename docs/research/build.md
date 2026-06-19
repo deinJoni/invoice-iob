@@ -16,12 +16,14 @@ Versions: esbuild **0.28.1**, tsup **8.5.1**, typescript **6.0.3** (stable; TS7/
 For core + a handful of provider packages, **pnpm workspaces alone** is right: (a) the final artifact is a single esbuild bundle from one entry, so no big build graph to cache; (b) `pnpm -r` runs scripts recursively; (c) `workspace:*` lets the bundler entry import internal packages by name and esbuild inlines them. Add **turbo 2.9.18** only later if cross-package typecheck+tests get slow. Avoid nx (heavier, overkill).
 
 `pnpm-workspace.yaml`:
+
 ```yaml
 packages:
-  - "packages/*"
+  - 'packages/*'
 ```
 
 Root `package.json`:
+
 ```json
 {
   "name": "invoice-iob",
@@ -40,10 +42,20 @@ Root `package.json`:
 ```
 
 A provider package depends on core via the workspace protocol; esbuild inlines it (pnpm symlink):
+
 ```json
-{ "name": "@invoice-iob/server", "type": "module",
-  "dependencies": { "@invoice-iob/core": "workspace:*", "@modelcontextprotocol/sdk": "1.29.0", "@e-invoice-eu/core": "3.1.1", "zod": "4.4.3" } }
+{
+  "name": "@invoice-iob/server",
+  "type": "module",
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@e-invoice-eu/core": "3.1.1",
+    "zod": "4.4.3"
+  }
+}
 ```
+
 No special esbuild config to bundle workspace packages — point the entry at the server package's `src/index.ts`, set `bundle: true`, and pnpm's symlinked node_modules resolve them like any dep.
 
 ## 2. esbuild — single self-contained file (VERIFIED working)
@@ -53,30 +65,37 @@ Use **format: 'esm'** (not cjs). The SDK is ESM-first; ESM avoids fighting its e
 Exact options: `entryPoints: ["packages/server/src/index.ts"]`, `bundle: true`, `platform: "node"`, `format: "esm"`, `target: "node22"` (Node 24 runtime; node22 floor is safe), `outfile: "dist/server.mjs"`, `minify: true` (optional), `sourcemap: false` for ship. **Externalize nothing** — leave `packages`/`external` unset so everything inlines (except `node:` builtins).
 
 Banner (shebang first byte, then the shims):
+
 ```js
-banner: { js: [
-  "#!/usr/bin/env node",
-  "import { createRequire as __cr } from 'node:module';",
-  "import { fileURLToPath as __ftp } from 'node:url';",
-  "import { dirname as __dn } from 'node:path';",
-  "const require = __cr(import.meta.url);",
-  "const __filename = __ftp(import.meta.url);",
-  "const __dirname = __dn(__filename);",
-].join("\n") }
+banner: {
+  js: [
+    '#!/usr/bin/env node',
+    "import { createRequire as __cr } from 'node:module';",
+    "import { fileURLToPath as __ftp } from 'node:url';",
+    "import { dirname as __dn } from 'node:path';",
+    'const require = __cr(import.meta.url);',
+    'const __filename = __ftp(import.meta.url);',
+    'const __dirname = __dn(__filename);',
+  ].join('\n');
+}
 ```
+
 Shebang must be byte 0. For `.mcpb` launched as `node server.mjs` the shebang is largely irrelevant, but keep it for direct-exec safety and `chmod +x`.
 
 ### Assets (OFL font + sRGB ICC) — use loader: 'binary' (VERIFIED)
+
 `loader: { ".otf": "binary", ".ttf": "binary", ".icc": "binary" }` and `import fontBytes from "../assets/font.otf"` → esbuild inlines the bytes as a `Uint8Array` at runtime (wrap with `Buffer.from(fontBytes)` for pdf-lib/fontkit). Verified the bytes survive and the output has NO relative asset import remaining → truly self-contained, no `__dirname`-relative file resolution. Do NOT use copy-file-and-resolve-path (fragile inside `.mcpb`) and avoid `dataurl` (binary is smaller, gives a typed array directly). Declare ambient `.d.ts` (`declare module "*.otf" { const b: Uint8Array; export default b; }`) so tsc passes.
 
 ## 3. tsc hang + typecheck strategy + tsconfig
 
 Confirmed: `tsc` crawls/hangs on the Zod4 + MCP-SDK `.d.ts` graph (deep recursive types). esbuild does NOT typecheck (strips types) — bundles in <1s. So **keep a separate typecheck step**:
+
 - (a) `tsc --noEmit` (slow but correct on TS 6.0.3) — CI source of truth.
 - (b) **tsgo** (`@typescript/native-preview`, TS7 beta, ~10x faster) — good for the dev loop, but beta; gate CI on real `tsc` until TS7 GA.
 - `skipLibCheck: true` materially reduces the SDK/Zod typecheck cost and is the standard mitigation for the hang — make it part of the recommended tsconfig.
 
 `tsconfig.json`:
+
 ```json
 {
   "compilerOptions": {
@@ -96,6 +115,7 @@ Confirmed: `tsc` crawls/hangs on the Zod4 + MCP-SDK `.d.ts` graph (deep recursiv
   }
 }
 ```
+
 `moduleResolution: "Bundler"` because esbuild resolves modules; lets you import `@invoice-iob/core` without `.js` extensions. `verbatimModuleSyntax` + `isolatedModules` keep the source esbuild-safe.
 
 ## 4. tsup vs raw esbuild — use raw esbuild
@@ -103,50 +123,54 @@ Confirmed: `tsc` crawls/hangs on the Zod4 + MCP-SDK `.d.ts` graph (deep recursiv
 Skip tsup 8.5.1 — a thin esbuild+rollup-dts wrapper for publishing libraries (dual CJS/ESM + `.d.ts` rollup). You're shipping ONE bundled app and need custom behavior tsup makes awkward: the `binary`/`icc` loaders, the multi-line createRequire+shebang banner, and "bundle everything, externalize nothing." A ~30-line `build.mjs` is clearer.
 
 ## Working build.mjs sketch
+
 ```js
 // scripts/build.mjs
-import { build } from "esbuild";
-import { chmod } from "node:fs/promises";
+import { build } from 'esbuild';
+import { chmod } from 'node:fs/promises';
 
 const banner = [
-  "#!/usr/bin/env node",
+  '#!/usr/bin/env node',
   "import { createRequire as __cr } from 'node:module';",
   "import { fileURLToPath as __ftp } from 'node:url';",
   "import { dirname as __dn } from 'node:path';",
-  "const require = __cr(import.meta.url);",
-  "const __filename = __ftp(import.meta.url);",
-  "const __dirname = __dn(__filename);",
-].join("\n");
+  'const require = __cr(import.meta.url);',
+  'const __filename = __ftp(import.meta.url);',
+  'const __dirname = __dn(__filename);',
+].join('\n');
 
 await build({
-  entryPoints: ["packages/server/src/index.ts"],
-  outfile: "dist/server.mjs",
+  entryPoints: ['packages/server/src/index.ts'],
+  outfile: 'dist/server.mjs',
   bundle: true,
-  platform: "node",
-  format: "esm",
-  target: "node22",
+  platform: 'node',
+  format: 'esm',
+  target: 'node22',
   minify: true,
   sourcemap: false,
   banner: { js: banner },
-  loader: { ".otf": "binary", ".ttf": "binary", ".icc": "binary" },
-  logLevel: "info",
+  loader: { '.otf': 'binary', '.ttf': 'binary', '.icc': 'binary' },
+  logLevel: 'info',
 });
-await chmod("dist/server.mjs", 0o755);
-console.log("bundled dist/server.mjs");
+await chmod('dist/server.mjs', 0o755);
+console.log('bundled dist/server.mjs');
 ```
+
 Entry (`packages/server/src/index.ts`):
+
 ```ts
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as z from "zod";
-import { InvoiceService, FormatFactoryService } from "@e-invoice-eu/core";
-import fontBytes from "../../../assets/NotoSans.otf";   // Uint8Array via binary loader
-const server = new McpServer({ name: "invoice-iob", version: "0.1.0" });
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as z from 'zod';
+import { InvoiceService, FormatFactoryService } from '@e-invoice-eu/core';
+import fontBytes from '../../../assets/NotoSans.otf'; // Uint8Array via binary loader
+const server = new McpServer({ name: 'invoice-iob', version: '0.1.0' });
 // ... server.registerTool(...) ...
 await server.connect(new StdioServerTransport());
 ```
 
 ## @e-invoice-eu/core integration note (load-bearing)
+
 Generate the visible PDF yourself with @cantoo/pdf-lib + @pdf-lib/fontkit, then hand it to core as `options.pdf.buffer`. The PDF code path: `options.pdf.buffer` present → use it; else `options.spreadsheet` → spawn LibreOffice (throws `'LibreOffice path is required for conversion to PDF!'` if `libreOfficePath` unset). XML-only formats never invoke LibreOffice. The `child_process`/`spawn`/LibreOffice references are dead code on your path — harmless to bundle, never executed.
 
 ## Decisions
@@ -162,18 +186,18 @@ Generate the visible PDF yourself with @cantoo/pdf-lib + @pdf-lib/fontkit, then 
 
 ## Packages
 
-| name | version | license | role |
-|---|---|---|---|
-| esbuild | 0.28.1 | MIT | The bundler (devDependency, not bundled). |
-| @modelcontextprotocol/sdk | 1.29.0 | MIT | ESM-first; bundles cleanly; CJS transitive deps need createRequire banner. |
-| @e-invoice-eu/core | 3.1.1 | WTFPL | Pure JS, dual CJS/ESM; LibreOffice/child_process is dead code on the supply-a-PDF path. |
-| zod | 4.4.3 | MIT | Tool input schemas (SDK accepts v3.25 || v4). |
-| @cantoo/pdf-lib | 2.7.1 | MIT | Render the visual PDF; also core's PDF dep. |
-| @pdf-lib/fontkit | 1.1.1 | MIT | Embed/subset the OFL font. |
-| tsup | 8.5.1 | MIT | Considered — REJECTED for a single-app artifact. |
-| turbo | 2.9.18 | MIT | Optional task runner — defer. |
-| @typescript/native-preview | 7.0.0-dev | Apache-2.0 | tsgo — optional ~10x faster typecheck; beta, don't gate CI. |
-| typescript | 6.0.3 | Apache-2.0 | `tsc --noEmit` CI typecheck; use skipLibCheck. |
+| name                       | version   | license    | role                                                                                    |
+| -------------------------- | --------- | ---------- | --------------------------------------------------------------------------------------- | --- | ---- |
+| esbuild                    | 0.28.1    | MIT        | The bundler (devDependency, not bundled).                                               |
+| @modelcontextprotocol/sdk  | 1.29.0    | MIT        | ESM-first; bundles cleanly; CJS transitive deps need createRequire banner.              |
+| @e-invoice-eu/core         | 3.1.1     | WTFPL      | Pure JS, dual CJS/ESM; LibreOffice/child_process is dead code on the supply-a-PDF path. |
+| zod                        | 4.4.3     | MIT        | Tool input schemas (SDK accepts v3.25                                                   |     | v4). |
+| @cantoo/pdf-lib            | 2.7.1     | MIT        | Render the visual PDF; also core's PDF dep.                                             |
+| @pdf-lib/fontkit           | 1.1.1     | MIT        | Embed/subset the OFL font.                                                              |
+| tsup                       | 8.5.1     | MIT        | Considered — REJECTED for a single-app artifact.                                        |
+| turbo                      | 2.9.18    | MIT        | Optional task runner — defer.                                                           |
+| @typescript/native-preview | 7.0.0-dev | Apache-2.0 | tsgo — optional ~10x faster typecheck; beta, don't gate CI.                             |
+| typescript                 | 6.0.3     | Apache-2.0 | `tsc --noEmit` CI typecheck; use skipLibCheck.                                          |
 
 ## Risks
 

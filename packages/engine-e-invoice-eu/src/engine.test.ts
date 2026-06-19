@@ -11,7 +11,9 @@ test('assertNoLibreOffice allows a pdf-only Factur-X options object', () => {
 });
 
 test('assertNoLibreOffice allows plain XML options (no pdf, no spreadsheet)', () => {
-  assert.doesNotThrow(() => assertNoLibreOffice({ format: 'XRECHNUNG-CII', lang: 'de-de' } as never));
+  assert.doesNotThrow(() =>
+    assertNoLibreOffice({ format: 'XRECHNUNG-CII', lang: 'de-de' } as never),
+  );
 });
 
 test('assertNoLibreOffice rejects a spreadsheet option (would invoke LibreOffice)', () => {
@@ -28,7 +30,12 @@ test('assertNoLibreOffice rejects a spreadsheet option (would invoke LibreOffice
 
 test('assertNoLibreOffice rejects a libreOfficePath option', () => {
   assert.throws(
-    () => assertNoLibreOffice({ format: 'UBL', lang: 'de-de', libreOfficePath: '/usr/bin/soffice' } as never),
+    () =>
+      assertNoLibreOffice({
+        format: 'UBL',
+        lang: 'de-de',
+        libreOfficePath: '/usr/bin/soffice',
+      } as never),
     /LibreOffice/,
   );
 });

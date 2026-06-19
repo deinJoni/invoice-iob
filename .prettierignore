@@ -1,0 +1,11 @@
+# Generated / vendored / machine-owned — never hand-formatted, so keep them out of the
+# `format` / `format:check` gate (otherwise the gate is non-deterministic or fights a tool).
+node_modules/
+pnpm-lock.yaml
+dist/
+build/
+output/
+.validators/
+.claude/
+*.mcpb
+assets/fonts/

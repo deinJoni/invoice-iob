@@ -1,6 +1,6 @@
 # invoice-iob — Engineering Architecture
 
-> How the pieces fit together. This is the engineering view; for the *decisions* behind each
+> How the pieces fit together. This is the engineering view; for the _decisions_ behind each
 > choice (pinned versions, the LibreOffice footgun, PDF/A ownership, fonts) see
 > [`docs/STACK.md`](STACK.md). For the roadmap see [`PLAN.md`](../PLAN.md); for the product spec
 > see [`PRD.md`](../PRD.md).
@@ -73,7 +73,7 @@ EN 16931 business terms and groups (BT-/BG-). Everything funnels through it:
 - **Tax math happens here, once.** The mapper computes line nets, the VAT breakdown, and the
   document totals in **integer minor units (cents)** via `src/money.ts` (`toCents`, `vatCents`,
   `lineNetCents`, `formatMoney`). EN 16931 business rules (BR-CO-10..16, the per-category
-  BR-S/E/Z/AE-08..10) compare the *printed* 2-decimal values, so amounts must be consistent to
+  BR-S/E/Z/AE-08..10) compare the _printed_ 2-decimal values, so amounts must be consistent to
   the cent — computing in cents avoids binary-float drift. Unit prices (BT-146) may carry more
   than two decimals and are formatted separately via `formatDecimal`.
 - **Renderers never recompute.** A `FormatProvider.render` reads totals straight off
@@ -110,18 +110,18 @@ lives in `packages/core/src/provider.ts`:
 
 ```ts
 interface FormatProvider {
-  readonly meta: FormatMeta;                                  // id, aliases, label, country,
-                                                              //   standard, syntax, outputKind,
-                                                              //   profiles, fileExtension,
-                                                              //   mimeType, bundleable, requires
-  validate(model: CanonicalInvoice, profile?: string): ValidationResult;   // cheap pre-flight
+  readonly meta: FormatMeta; // id, aliases, label, country,
+  //   standard, syntax, outputKind,
+  //   profiles, fileExtension,
+  //   mimeType, bundleable, requires
+  validate(model: CanonicalInvoice, profile?: string): ValidationResult; // cheap pre-flight
   render(model: CanonicalInvoice, options: RenderOptions): Promise<RenderedArtifact>;
-  mapExtensions?(input: unknown): Record<string, unknown>;    // fold country-specific input
+  mapExtensions?(input: unknown): Record<string, unknown>; // fold country-specific input
 }
 ```
 
 `validate` is a **cheap pre-flight** — generic checks (`baseEn16931Issues(model)`) plus any CIUS
-rules the format layers on. It is deliberately *not* the authoritative validator. The real gate is
+rules the format layers on. It is deliberately _not_ the authoritative validator. The real gate is
 the external KoSIT / veraPDF / Mustang toolchain that runs in CI (Java, never bundled). Issues
 carry a `rule` id and a `severity`; `validationResult(issues)` sets `ok` to `false` if any issue
 is an `error`. XRechnung's `brDeIssues(model)` (`packages/format-xrechnung/src/index.ts`) is the
@@ -143,8 +143,8 @@ them explicitly in `packages/server/src/registry.ts`:
 ```ts
 export function buildRegistry(): FormatRegistry {
   const registry = new FormatRegistry();
-  registerXRechnung(registry);  // DE launch formats first
-  registerUblCii(registry);     // generic EU formats
+  registerXRechnung(registry); // DE launch formats first
+  registerUblCii(registry); // generic EU formats
   return registry;
 }
 ```
@@ -186,7 +186,7 @@ wrong:
    by EN 16931 BT/BG codes.
 2. **Attributes are flattened sibling keys**, not nested objects:
    `'cbc:LineExtensionAmount@currencyID'`, `'cbc:InvoicedQuantity@unitCode'`,
-   `'cbc:CompanyID@schemeID'` live *next to* their value key.
+   `'cbc:CompanyID@schemeID'` live _next to_ their value key.
 3. **All amounts/quantities/rates are strings** (`formatMoney`, `formatDecimal`, `formatRate`),
    never numbers.
 
@@ -206,7 +206,7 @@ assembly (see §7). `generateFacturX` asserts a non-empty source PDF and passes 
 
 ### The LibreOffice-avoidance guard (load-bearing)
 
-`@e-invoice-eu/core` *does* import `child_process` and *can* spawn LibreOffice — but only on its
+`@e-invoice-eu/core` _does_ import `child_process` and _can_ spawn LibreOffice — but only on its
 spreadsheet→PDF path. The Node-only-bundle promise holds **only** if we never take that path. The
 adapter enforces it with `assertNoLibreOffice(options)`, called before every `generate()`, which
 throws if `options.spreadsheet` or `options.libreOfficePath` is ever set:
@@ -294,7 +294,7 @@ Key esbuild settings (`scripts/build.mjs`):
   throw.
 - **Binary asset loader.** `loader: { '.ttf': 'binary', '.otf': 'binary', '.icc': 'binary' }` so a
   font `import` yields a `Uint8Array` inlined into the bundle. The visual PDF font (IBM Plex Sans,
-  OFL-1.1) ships *inside* the `.mjs` with no runtime file resolution — the bundle is fully
+  OFL-1.1) ships _inside_ the `.mjs` with no runtime file resolution — the bundle is fully
   self-contained. (Subset at render time; see [`docs/STACK.md`](STACK.md#fonts).)
 - The output is `chmod 0o755`; the script prints size and module count.
 
@@ -319,7 +319,7 @@ report for `recommendation=accept` and zero `rep:error`, never trust the exit co
 
 ## 7. PDF/A-3 ownership split (P2)
 
-For ZUGFeRD/Factur-X the work is split cleanly between *us* and the engine. We render a **clean
+For ZUGFeRD/Factur-X the work is split cleanly between _us_ and the engine. We render a **clean
 source PDF**; the engine turns it into a conformant PDF/A-3 and attaches the XML. We do **not**
 ship an ICC profile — the engine embeds its own inline sRGB profile.
 
@@ -341,7 +341,7 @@ ship an ICC profile — the engine embeds its own inline sRGB profile.
 ```
 
 The boundary matters because the engine adds OutputIntent/XMP/AF but does **not** fix a missing
-embedded font or non-Device color in our input PDF — so PDF/A-3 conformance depends on *our*
+embedded font or non-Device color in our input PDF — so PDF/A-3 conformance depends on _our_
 render quality, and the engine's pdf-lib PDF/A path is upstream-flagged "not battle tested." That
 is exactly why the veraPDF (`-f 3b`) and Mustang validation CI gates are mandatory on every build.
 Full rationale and the exact MUST/MUST-NOT list are in

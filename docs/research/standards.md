@@ -12,14 +12,14 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 - **XRechnung 4.0** is announced (March 2026), preliminary/test only. Rebases on EN 16931-1:2026 + UBL 2.5 / CII D25A. No mandatory adoption date — do NOT target it.
 - **Syntaxes (two, both EN16931-compliant):** UBL 2.1 Invoice/CreditNote; UN/CEFACT CII **D16B**. Note: ZUGFeRD/Factur-X uses a later CII schema (SCRDM **D22B**, backward-compatible with D16B) — same family, different schema versions; matters for XSD selection.
 - **Customization ID (BT-24) for XRechnung 3.0:** `urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0` (Extension: `...#conformant#urn:xeinkauf.de:kosit:extension:xrechnung_3.0`). Plain EN16931 UBL/CII uses `urn:cen.eu:en16931:2017`.
-- **BR-DE-* essentials (the German layer on top of EN16931 + BR-CO):**
+- **BR-DE-\* essentials (the German layer on top of EN16931 + BR-CO):**
   - **BR-DE-1**: SELLER CONTACT (BG-6) mandatory.
   - **BR-DE-2..5**: seller contact point (BT-41), phone (BT-42), email (BT-43), postal address detail must be present.
   - **BR-DE-15**: **BT-10 Buyer reference is MANDATORY** (promoted from optional). The single most important DE rule — every emitted XRechnung must carry BT-10.
   - **BR-DE-21**: BT-24 must equal the XRechnung customization ID.
   - **BR-DE-23/24/25**: credit transfer (58) → payment account (BG-17) present; SEPA/direct-debit conditional groups likewise.
   - **BR-DE-26**: invoice type code 384 (corrected) → PRECEDING INVOICE REFERENCE (BG-3) present.
-  - Plus BR-DEX-* extension rules and CEN BR-CO-* / codelist rules. KoSIT enforces all three layers.
+  - Plus BR-DEX-_ extension rules and CEN BR-CO-_ / codelist rules. KoSIT enforces all three layers.
 - **Leitweg-ID / BT-10:**
   - BT-10 is always required in XRechnung (BR-DE-15), independent of BT-13.
   - **B2G** to German authorities: BT-10 must be a valid Leitweg-ID (structured `Grobadressierung-Feinadressierung-Prüfziffer`). Portals ZRE/OZG-RE reject invoices lacking it. KoSIT does NOT verify the checksum — only that BT-10 is present/non-empty.
@@ -39,6 +39,7 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 ## 3. CI validators (dev/CI-only Java — NEVER bundled)
 
 ### KoSIT validator (XML / EN16931 + BR-DE)
+
 - **Tool:** `validator` v**1.6.2** (released 2026-02-17). `validator-1.6.2-standalone.jar`. **Java 11+** (up to Java 25; Java 8 dropped at 1.6.0). Apache-2.0.
 - **Config:** `validator-configuration-xrechnung` release **2026-01-31** (XRechnung Schematron 2.4.0, CEN rules 1.3.15, SchXslt 1.10.1, targets XRechnung 3.0.x). Release zip contains `scenarios.xml` + resources.
 - **Headless invocation:**
@@ -51,6 +52,7 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 - **What "green" looks like:** the validator ALWAYS writes `<inputname>-report.xml` and **does NOT set a failing exit code on a rejected document** — it exits 0 for "validation ran", non-zero only for config/IO errors. **CI must parse the report.** Pass = recommendation resolves to **accept** (`<rep:assessment><rep:accept>` present, `xmlns:rep="http://www.xoev.de/de/validator/varl/1"`) and zero `<rep:error>`. (`--check-assertions` testsuite mode does flip the exit code.)
 
 ### veraPDF (PDF/A-3b conformance)
+
 - **Tool:** veraPDF **1.30** (released 2026-06-03). `verapdf-installer.zip` / `verapdf-gf-installer.zip` (greenfield parser — recommended). Dual GPLv3 / MPLv2. Java 8+ (bundled).
 - **Headless invocation:**
   ```bash
@@ -60,6 +62,7 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 - PDF/A-3**b** (visual) is the right target (3a adds tagging/accessibility — not required).
 
 ### Mustang (ZUGFeRD/Factur-X profile + embedded-XML)
+
 - **Tool:** Mustangproject **2.24.0** (released 2026-06-12). `Mustang-CLI-2.24.0.jar`. Apache-2.0. **Embeds veraPDF** for the PDF/A check — validates both the container and the CII XML against the declared profile.
 - **Headless invocation:**
   ```bash
@@ -71,14 +74,15 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 
 ## 4. PRD §10 acceptance bar — concrete CI mapping
 
-| §10 requirement | Tool + assertion |
-|---|---|
-| EN16931 schema + KoSIT pass | KoSIT 1.6.2 + config 2026-01-31; report recommendation `accept` and zero `<rep:error>`. Run for the standalone XML AND the XML extracted from the hybrid PDF. |
-| veraPDF PDF/A-3b zero errors | `verapdf -f 3b --format xml`; assert `isCompliant="true"` and `failedChecks="0"`. |
-| ZUGFeRD validator confirms profile | `Mustang-CLI --action validate`; assert `<summary status="valid"/>` and reported profile == expected (EN16931/Comfort). |
-| Embedded XML byte-equals standalone XML | Extract embedded `factur-x.xml` (pdf-lib / `qpdf --show-attachment` / Mustang `--action extract`) and `cmp`/sha256 against the standalone CII XML artifact. Keep the embedding step from re-serializing so bytes match. **Note:** the standalone XRechnung CII (D16B) and the embedded Factur-X CII (D22B) are DIFFERENT documents — the byte-equality check only holds when comparing the embedded Factur-X XML against the standalone *Factur-X* CII artifact, not the XRechnung CII. |
+| §10 requirement                         | Tool + assertion                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EN16931 schema + KoSIT pass             | KoSIT 1.6.2 + config 2026-01-31; report recommendation `accept` and zero `<rep:error>`. Run for the standalone XML AND the XML extracted from the hybrid PDF.                                                                                                                                                                                                                                                                                                                           |
+| veraPDF PDF/A-3b zero errors            | `verapdf -f 3b --format xml`; assert `isCompliant="true"` and `failedChecks="0"`.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ZUGFeRD validator confirms profile      | `Mustang-CLI --action validate`; assert `<summary status="valid"/>` and reported profile == expected (EN16931/Comfort).                                                                                                                                                                                                                                                                                                                                                                 |
+| Embedded XML byte-equals standalone XML | Extract embedded `factur-x.xml` (pdf-lib / `qpdf --show-attachment` / Mustang `--action extract`) and `cmp`/sha256 against the standalone CII XML artifact. Keep the embedding step from re-serializing so bytes match. **Note:** the standalone XRechnung CII (D16B) and the embedded Factur-X CII (D22B) are DIFFERENT documents — the byte-equality check only holds when comparing the embedded Factur-X XML against the standalone _Factur-X_ CII artifact, not the XRechnung CII. |
 
 ### GitHub Actions skeleton (Java tools fetched at CI time, never shipped)
+
 ```yaml
 - uses: actions/setup-java@v4
   with: { distribution: temurin, java-version: '21' }
@@ -97,10 +101,12 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
     java -jar Mustang-CLI.jar --action validate --source out/invoice.pdf --no-notices > reports/mustang.xml
     # a node/jq script asserts accept / isCompliant=true / status=valid + byte-equal
 ```
+
 (Resolve exact asset URLs via the GitHub releases API rather than hardcoding — they rot every release.)
 
 ## Engine + dependency reality check (npm, verified)
-- `@e-invoice-eu/core` **3.1.1** (WTFPL). Supports UBL, CII, XRechnung (UBL+CII), Factur-X/ZUGFeRD all profiles incl. EN16931/Comfort; PDF/A-3 assembly purely with pdf-lib (Node-only). Its built-in *visual* PDF generation shells out to LibreOffice — bypass it (supply your own PDF).
+
+- `@e-invoice-eu/core` **3.1.1** (WTFPL). Supports UBL, CII, XRechnung (UBL+CII), Factur-X/ZUGFeRD all profiles incl. EN16931/Comfort; PDF/A-3 assembly purely with pdf-lib (Node-only). Its built-in _visual_ PDF generation shells out to LibreOffice — bypass it (supply your own PDF).
 - `@cantoo/pdf-lib` **2.7.1** (MIT); `@pdf-lib/fontkit` **1.1.1** (MIT); `@modelcontextprotocol/sdk` **1.29.0** (MIT); `zod` **4.4.3**.
 
 ## Decisions
@@ -116,17 +122,17 @@ As of mid-2026 the production German CIUS is **XRechnung 3.0.2** (still current;
 
 ## Packages
 
-| name | version | license | bundleable | purpose |
-|---|---|---|---|---|
-| @e-invoice-eu/core | 3.1.1 | WTFPL | conditional | EN16931 XML + Factur-X profiles + PDF/A-3 assembly (avoid LibreOffice visual-PDF path) |
-| @cantoo/pdf-lib | 2.7.1 | MIT | yes | PDF rendering + PDF/A-3 hybrid assembly |
-| @pdf-lib/fontkit | 1.1.1 | MIT | yes | Font embedding/subsetting |
-| @modelcontextprotocol/sdk | 1.29.0 | MIT | yes | MCP server SDK |
-| zod | 4.4.3 | MIT | yes | Input schema validation |
-| KoSIT validator (standalone jar) | 1.6.2 | Apache-2.0 | no (dev/CI) | XSD + EN16931 + BR-DE Schematron validation |
-| validator-configuration-xrechnung | release 2026-01-31 | Apache-2.0 | no (dev/CI) | scenarios.xml + Schematron resources |
-| veraPDF | 1.30 | GPLv3/MPLv2 | no (dev/CI) | PDF/A-3b conformance |
-| Mustangproject CLI | 2.24.0 | Apache-2.0 | no (dev/CI) | ZUGFeRD/Factur-X profile + container validation (embeds veraPDF) |
+| name                              | version            | license     | bundleable  | purpose                                                                                |
+| --------------------------------- | ------------------ | ----------- | ----------- | -------------------------------------------------------------------------------------- |
+| @e-invoice-eu/core                | 3.1.1              | WTFPL       | conditional | EN16931 XML + Factur-X profiles + PDF/A-3 assembly (avoid LibreOffice visual-PDF path) |
+| @cantoo/pdf-lib                   | 2.7.1              | MIT         | yes         | PDF rendering + PDF/A-3 hybrid assembly                                                |
+| @pdf-lib/fontkit                  | 1.1.1              | MIT         | yes         | Font embedding/subsetting                                                              |
+| @modelcontextprotocol/sdk         | 1.29.0             | MIT         | yes         | MCP server SDK                                                                         |
+| zod                               | 4.4.3              | MIT         | yes         | Input schema validation                                                                |
+| KoSIT validator (standalone jar)  | 1.6.2              | Apache-2.0  | no (dev/CI) | XSD + EN16931 + BR-DE Schematron validation                                            |
+| validator-configuration-xrechnung | release 2026-01-31 | Apache-2.0  | no (dev/CI) | scenarios.xml + Schematron resources                                                   |
+| veraPDF                           | 1.30               | GPLv3/MPLv2 | no (dev/CI) | PDF/A-3b conformance                                                                   |
+| Mustangproject CLI                | 2.24.0             | Apache-2.0  | no (dev/CI) | ZUGFeRD/Factur-X profile + container validation (embeds veraPDF)                       |
 
 ## Risks
 
