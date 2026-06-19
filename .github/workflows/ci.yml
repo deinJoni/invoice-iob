@@ -180,25 +180,16 @@ jobs:
       - name: Generate fixtures (incl. ZUGFeRD hybrid)
         run: node scripts/gen-fixtures.mjs
 
-      # Resolve the Mustang-CLI jar URL via the GitHub Releases API (tags rot less than asset paths).
+      # Mustang publishes the runnable CLI jar as a GitHub release asset under the `core-<ver>` tag.
+      # We pin the exact asset URL (verified: tag core-2.24.0 → Mustang-CLI-2.24.0.jar) — no API/jq.
       - name: Download Mustangproject CLI 2.24.0 (embeds veraPDF)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MUSTANG_TAG: core-2.24.0
         run: |
           set -euo pipefail
           mkdir -p .validators
-          asset_re='Mustang-CLI.*\.jar$'
-          # Try the pinned tag first, then fall back to scanning recent releases for the CLI jar.
-          JAR_URL="$(gh api "repos/ZUGFeRD/mustangproject/releases/tags/${MUSTANG_TAG}" \
-            --jq ".assets[] | select(.name | test(\"${asset_re}\")) | .browser_download_url" 2>/dev/null | head -n1 || true)"
-          if [ -z "${JAR_URL:-}" ]; then
-            JAR_URL="$(gh api "repos/ZUGFeRD/mustangproject/releases?per_page=30" \
-              --jq ".[].assets[] | select(.name | test(\"${asset_re}\")) | .browser_download_url" | head -n1)"
-          fi
-          test -n "${JAR_URL:-}" || { echo "Could not resolve a Mustang-CLI jar URL"; exit 1; }
+          JAR_URL="https://github.com/ZUGFeRD/mustangproject/releases/download/core-2.24.0/Mustang-CLI-2.24.0.jar"
           echo "Mustang CLI: $JAR_URL"
           curl -fsSL "$JAR_URL" -o .validators/mustang-cli.jar
+          test -s .validators/mustang-cli.jar || { echo "Mustang CLI jar download empty"; exit 1; }
           echo "MUSTANG_JAR=$PWD/.validators/mustang-cli.jar" >> "$GITHUB_ENV"
 
       - name: Validate hybrid (Mustang --action validate → embedded veraPDF + Factur-X)
