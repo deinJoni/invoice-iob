@@ -21,7 +21,7 @@ importers:
         specifier: 0.28.1
         version: 0.28.1
       prettier:
-        specifier: ^3.4.2
+        specifier: 3.8.4
         version: 3.8.4
       typescript:
         specifier: 6.0.3
@@ -41,6 +41,18 @@ importers:
       '@invoice-iob/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/format-facturx-fr:
+    dependencies:
+      '@invoice-iob/core':
+        specifier: workspace:*
+        version: link:../core
+      '@invoice-iob/engine-e-invoice-eu':
+        specifier: workspace:*
+        version: link:../engine-e-invoice-eu
+      '@invoice-iob/pdf-renderer':
+        specifier: workspace:*
+        version: link:../pdf-renderer
 
   packages/format-pdf:
     dependencies:
@@ -98,6 +110,9 @@ importers:
       '@invoice-iob/core':
         specifier: workspace:*
         version: link:../core
+      '@invoice-iob/format-facturx-fr':
+        specifier: workspace:*
+        version: link:../format-facturx-fr
       '@invoice-iob/format-pdf':
         specifier: workspace:*
         version: link:../format-pdf

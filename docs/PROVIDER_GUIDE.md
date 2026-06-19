@@ -41,26 +41,40 @@ From `@invoice-iob/core` (do not redefine these — import them):
 
 ```ts
 interface FormatMeta {
-  id: string;                 // canonical, stable, kebab-case: "acme-xml"
-  aliases?: string[];         // case-insensitive alternates: ["acme", "ac-national"]
-  label: string;              // human-readable, for list_formats
-  country: string;            // ISO 3166-1 alpha-2, or "EU" for pan-European generic
-  standard: string;           // e.g. "EN 16931" or "AC National e-Invoice 1.0"
+  id: string; // canonical, stable, kebab-case: "acme-xml"
+  aliases?: string[]; // case-insensitive alternates: ["acme", "ac-national"]
+  label: string; // human-readable, for list_formats
+  country: string; // ISO 3166-1 alpha-2, or "EU" for pan-European generic
+  standard: string; // e.g. "EN 16931" or "AC National e-Invoice 1.0"
   syntax: 'UBL' | 'CII' | 'PDF' | 'hybrid' | string;
   outputKind: 'xml' | 'pdf' | 'hybrid';
-  profiles?: string[];        // for hybrids; omit for single-profile formats
+  profiles?: string[]; // for hybrids; omit for single-profile formats
   defaultProfile?: string;
-  fileExtension: string;      // without the dot: "xml"
-  mimeType: string;           // "application/xml"
-  bundleable: boolean;        // true = pure-JS, ships in the default Node-only .mcpb
-  requires?: string[];        // native runtimes for non-bundleable providers
+  fileExtension: string; // without the dot: "xml"
+  mimeType: string; // "application/xml"
+  bundleable: boolean; // true = pure-JS, ships in the default Node-only .mcpb
+  requires?: string[]; // native runtimes for non-bundleable providers
 }
 
-interface ValidationIssue { rule?: string; message: string; severity: 'error' | 'warning' }
-interface ValidationResult { ok: boolean; issues: ValidationIssue[] }   // helper: validationResult(issues)
+interface ValidationIssue {
+  rule?: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+interface ValidationResult {
+  ok: boolean;
+  issues: ValidationIssue[];
+} // helper: validationResult(issues)
 
-interface RenderOptions { profile?: string; lang?: string }
-interface RenderedArtifact { bytes: Uint8Array; mimeType: string; extension: string }
+interface RenderOptions {
+  profile?: string;
+  lang?: string;
+}
+interface RenderedArtifact {
+  bytes: Uint8Array;
+  mimeType: string;
+  extension: string;
+}
 
 interface FormatProvider {
   readonly meta: FormatMeta;
@@ -326,6 +340,46 @@ import resolves. That's the whole integration: `list_formats` now enumerates `ac
 `create_invoice` resolves `"acme-xml"`, `"acme"`, or `"ac-national"` (case-insensitive) to your
 provider.
 
+## Worked example: a country provider (the French `factur-x-fr`)
+
+`format-acme` above is an XML-only toy. The French [`format-facturx-fr`](../packages/format-facturx-fr/src/index.ts)
+is the real thing — a hybrid Factur-X provider that proves the thesis end-to-end (France was added
+with **zero forks** of the core pipeline). A few patterns it establishes, worth reusing:
+
+- **Carry national identifiers through the generic typed fields, not the extension bag.** Anything
+  that has an EN 16931 home must live on the canonical model so the serializer can emit it — the
+  opaque `extensions` bag never reaches the XML. France puts the **SIREN** on
+  `Party.legalRegistrationId` (BT-30/47, scheme `0002`) and the **SIRET** on the generic
+  `Party.identifiers` array (BT-29/46, scheme `0009`); the engine adapter emits both as
+  `cac:PartyIdentification` / `cac:PartyLegalEntity`. Adding a _generic_ model field + serializer
+  branch (the one core change France needed) beats hard-coding a country special-case in the engine.
+  **EN 16931 cardinality:** the seller identifier is repeatable (array), the buyer is 0..1 (single
+  object) — the engine schema enforces it, so honour it per side.
+- **Reserve `extensions` + `mapExtensions` for fields with no EN 16931 home.** France uses them for
+  the visible-document legals (legal form, share capital, RCS city, nature de l'opération) that drive
+  the PDF mentions but aren't business terms. The server calls `mapExtensions(input)` and merges the
+  result into `model.extensions` before `validate()`/`render()`.
+- **A hybrid/PDF provider can't be unit-tested by importing its `index.ts`** — that transitively
+  pulls the renderer's embedded `.ttf`, which `node --test` can't load. Factor the pure logic
+  (checksums, rules, profile resolution, metadata) into a sibling module (e.g. `rules.ts`) and test
+  that; keep `index.ts` as the thin renderer/engine composition. See
+  [`format-facturx-fr/src/rules.ts`](../packages/format-facturx-fr/src/rules.ts).
+- **Localize in the renderer, not the provider.** Add your locale to
+  [`pdf-renderer/src/theme.ts`](../packages/pdf-renderer/src/theme.ts) (`LABELS`, `UNIT_LABELS`,
+  `Intl` tag, date format). Watch the `Intl` output: French groups thousands with U+202F, outside the
+  embedded font — the renderer normalizes it. Pass mandatory fine print via `RenderPdfOptions.legalNotes`.
+
+### The CI cross-product: every example must validate against every provider
+
+`gen-fixtures.mjs` crosses **every `examples/*.json` with every format path**, and a `create_invoice`
+error (a failing `validate()`) fails fixture generation. So a national provider's **presence** rules
+(e.g. "a French seller must have a SIREN/SIRET") must be **gated on the seller country** — otherwise
+the German example invoices fail your provider's `validate()` and turn CI red. Format checks (a
+checksum on an identifier that _is_ present) can apply unconditionally. `factur-x-fr` does exactly
+this: `frIssues()` requires SIREN/SIRET only when `seller.country === 'FR'`, but Luhn-checks any
+SIREN/SIRET it finds. Make your country example "universal" too (carry `buyerReference` + seller
+contact) so it survives the other providers' gates (e.g. XRechnung's BR-DE rules).
+
 ## Checklist before you open a PR
 
 - [ ] `meta.id` is stable, kebab-case, and unique; aliases don't collide with existing formats.
@@ -335,7 +389,14 @@ provider.
 - [ ] If you touch the Factur-X path: `options.pdf` only; never `spreadsheet`/`libreOfficePath`;
       guard + test it.
 - [ ] National conformance is gated in **CI** (KoSIT/veraPDF/Mustang), parsing reports, not exit
-      codes.
+      codes. Add a row to [`scripts/lib/matrix.mjs`](../scripts/lib/matrix.mjs) keyed by `meta.id`
+      (the drift guard fails CI otherwise).
+- [ ] National **presence** rules are gated on country (so the CI cross-product — every example ×
+      every provider — stays green); format/checksum rules may apply unconditionally.
+- [ ] National identifiers ride the canonical model's typed fields (so they reach the XML), not the
+      `extensions` bag; respect the seller-array / buyer-single identifier cardinality.
+- [ ] For a hybrid/PDF provider, the unit-tested logic lives in a renderer-free module (importing the
+      provider pulls the renderer's `.ttf`, which `node --test` can't load).
 - [ ] Provider registered in `packages/server/src/registry.ts`; package added as a `workspace:*`
       dep of the server.
 - [ ] `pnpm run typecheck`, `pnpm test`, and `pnpm run smoke` all pass.

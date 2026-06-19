@@ -23,6 +23,14 @@
 # Generic EN 16931 UBL & CII providers.
 /packages/format-ubl-cii/           @deinJoni
 
+# Template-driven visual PDF renderer (locales de/en/fr) + the visual-PDF provider.
+/packages/pdf-renderer/             @deinJoni
+/packages/format-pdf/               @deinJoni
+
+# ZUGFeRD / Factur-X hybrid (DE) and Factur-X France (FR) hybrid providers.
+/packages/format-zugferd/           @deinJoni
+/packages/format-facturx-fr/        @deinJoni
+
 # MCP stdio server (create_invoice, list_formats) — the bundle entrypoint.
 /packages/server/                   @deinJoni
 

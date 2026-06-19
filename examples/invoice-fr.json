@@ -1,0 +1,74 @@
+{
+  "format": "FACTUR-X-FR",
+  "language": "fr-FR",
+  "invoiceNumber": "FR-2026-0042",
+  "issueDate": "2026-06-19",
+  "dueDate": "2026-07-19",
+  "currency": "EUR",
+  "buyerReference": "BC-2026-5571",
+  "orderReference": "CMD-2026-0098",
+  "note": "Merci pour votre confiance. Prestations réalisées au cours du mois de mai 2026.",
+  "seller": {
+    "name": "Atelier Lumière SAS",
+    "vatId": "FR44732829320",
+    "address": {
+      "line1": "18 rue du Faubourg Saint-Antoine",
+      "city": "Paris",
+      "postalCode": "75012",
+      "countryCode": "FR"
+    },
+    "contactName": "Camille Roux",
+    "contactPhone": "+33 1 44 55 66 77",
+    "contactEmail": "facturation@atelier-lumiere.fr",
+    "electronicAddress": { "scheme": "EM", "value": "facturation@atelier-lumiere.fr" },
+    "legalRegistrationId": { "scheme": "0002", "value": "732829320" },
+    "identifiers": [{ "scheme": "0009", "value": "73282932000074" }]
+  },
+  "buyer": {
+    "name": "Studio Garance SARL",
+    "vatId": "FR64443061841",
+    "address": {
+      "line1": "27 quai Saint-Antoine",
+      "city": "Lyon",
+      "postalCode": "69002",
+      "countryCode": "FR"
+    },
+    "electronicAddress": { "scheme": "EM", "value": "compta@studio-garance.fr" },
+    "legalRegistrationId": { "scheme": "0002", "value": "443061841" },
+    "identifiers": [{ "scheme": "0009", "value": "44306184100047" }]
+  },
+  "delivery": { "periodStart": "2026-05-01", "periodEnd": "2026-05-31" },
+  "payment": {
+    "meansCode": "58",
+    "iban": "FR7630006000011234567890189",
+    "bic": "AGRIFRPP",
+    "accountName": "Atelier Lumière SAS",
+    "terms": "Paiement à 30 jours à compter de la date de facture, par virement bancaire."
+  },
+  "lines": [
+    {
+      "name": "Développement logiciel sur mesure",
+      "description": "Conception et réalisation du module de facturation (mai 2026)",
+      "quantity": 10,
+      "unitCode": "HUR",
+      "netUnitPrice": 90,
+      "vatRate": 20
+    },
+    {
+      "name": "Documentation imprimée — guide utilisateur",
+      "description": "Manuel relié, tirage de 30 exemplaires (taux réduit livres, 5,5 %)",
+      "quantity": 30,
+      "unitCode": "C62",
+      "netUnitPrice": 12,
+      "vatRate": 5.5
+    }
+  ],
+  "extensions": {
+    "fr": {
+      "legalForm": "SAS",
+      "shareCapital": "50 000 €",
+      "rcsCity": "Paris",
+      "operationType": "services"
+    }
+  }
+}

@@ -1,13 +1,18 @@
 import { PDFDocument } from '@cantoo/pdf-lib';
 import type { Color, PDFFont, PDFPage } from '@cantoo/pdf-lib';
 import type { CanonicalInvoice, Party } from '@invoice-iob/core';
-import { COLORS, FS, LABELS, PAGE, unitLabel, type Locale } from './theme.ts';
+import { COLORS, FS, LABELS, PAGE, idSchemeLabel, unitLabel, type Locale } from './theme.ts';
 import { embedFonts } from './fonts.ts';
 import { sanitize, wrapText } from './text.ts';
 
 export interface RenderPdfOptions {
   /** Document language for labels and number formatting. Defaults from the seller's country. */
   locale?: Locale;
+  /**
+   * Extra legally-mandated fine print to render below the note (e.g. the French Code de commerce
+   * late-payment mentions). Provided by the country provider; rendered verbatim as small print.
+   */
+  legalNotes?: string[];
 }
 
 interface TextOpts {
@@ -29,7 +34,32 @@ function formatDate(iso: string, locale: Locale): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
   const [, y, mo, d] = m;
-  return locale === 'de' ? `${d}.${mo}.${y}` : `${y}-${mo}-${d}`;
+  if (locale === 'de') return `${d}.${mo}.${y}`;
+  if (locale === 'fr') return `${d}/${mo}/${y}`;
+  return `${y}-${mo}-${d}`;
+}
+
+/**
+ * Normalize the narrow/thin no-break spaces that `Intl` emits for some locales (fr-FR groups
+ * thousands with U+202F) to a regular no-break space, which the embedded IBM Plex Sans renders —
+ * U+202F is outside the font's covered range and would otherwise be sanitized to "?".
+ */
+function normalizeSpaces(s: string): string {
+  return s.replace(/[  ]/g, ' ');
+}
+
+/** Labeled tax/registration identifiers for a party (VAT id, SIRET, SIREN, tax no.). */
+function partyIdLines(p: Party, vatLabel: string, taxLabel: string): string[] {
+  const bits: string[] = [];
+  if (p.vatId) bits.push(`${vatLabel} ${p.vatId}`);
+  for (const id of p.identifiers ?? [])
+    bits.push(`${idSchemeLabel(id.scheme) ?? taxLabel} ${id.value}`);
+  if (p.legalRegistrationId) {
+    const lr = p.legalRegistrationId;
+    bits.push(`${idSchemeLabel(lr.scheme) ?? taxLabel} ${lr.value}`);
+  }
+  if (p.taxNumber) bits.push(`${taxLabel} ${p.taxNumber}`);
+  return bits;
 }
 
 /** Render the canonical invoice to a visual PDF (Uint8Array). Amounts come from the model. */
@@ -37,19 +67,23 @@ export async function renderInvoicePdf(
   model: CanonicalInvoice,
   options: RenderPdfOptions = {},
 ): Promise<Uint8Array> {
-  const locale: Locale = options.locale ?? (model.seller.address.countryCode === 'DE' ? 'de' : 'en');
+  const locale: Locale =
+    options.locale ?? (model.seller.address.countryCode === 'DE' ? 'de' : 'en');
   const L = LABELS[locale];
-  const intlLocale = locale === 'de' ? 'de-DE' : 'en-US';
+  const intlLocale = locale === 'de' ? 'de-DE' : locale === 'fr' ? 'fr-FR' : 'en-US';
   const currency = model.currency;
 
-  const num = new Intl.NumberFormat(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = new Intl.NumberFormat(intlLocale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   const cur = new Intl.NumberFormat(intlLocale, { style: 'currency', currency });
   const qtyFmt = new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 3 });
   const rateFmt = new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 2 });
-  const fmtNum = (n: number) => num.format(n);
-  const fmtCur = (n: number) => cur.format(n);
-  const fmtQty = (n: number) => qtyFmt.format(n);
-  const fmtRate = (n: number) => rateFmt.format(n);
+  const fmtNum = (n: number) => normalizeSpaces(num.format(n));
+  const fmtCur = (n: number) => normalizeSpaces(cur.format(n));
+  const fmtQty = (n: number) => normalizeSpaces(qtyFmt.format(n));
+  const fmtRate = (n: number) => normalizeSpaces(rateFmt.format(n));
 
   const doc = await PDFDocument.create();
   const { regular, bold } = await embedFonts(doc);
@@ -90,12 +124,20 @@ export async function renderInvoicePdf(
     text(s, xRight - w, yy, o);
   };
   const hline = (yy: number, x1: number = left, x2: number = right, thickness = 0.7): void => {
-    page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness, color: COLORS.line });
+    page.drawLine({
+      start: { x: x1, y: yy },
+      end: { x: x2, y: yy },
+      thickness,
+      color: COLORS.line,
+    });
   };
   const newPage = (): void => {
     page = doc.addPage([PAGE.width, PAGE.height]);
     y = top;
-    text(`${L.invoice} ${model.invoiceNumber} — ${L.page}`, left, y, { size: FS.tiny, color: COLORS.muted });
+    text(`${L.invoice} ${model.invoiceNumber} — ${L.page}`, left, y, {
+      size: FS.tiny,
+      color: COLORS.muted,
+    });
     y -= 22;
   };
   const ensure = (space: number, redrawTableHeader = false): void => {
@@ -125,7 +167,11 @@ export async function renderInvoicePdf(
     ry -= 12;
   }
 
-  textRight(L.invoice.toUpperCase(), right, top - 2, { font: bold, size: FS.title, color: COLORS.accent });
+  textRight(L.invoice.toUpperCase(), right, top - 2, {
+    font: bold,
+    size: FS.title,
+    color: COLORS.accent,
+  });
   let my = top - 36;
   const metaRows: Array<[string, string]> = [
     [L.invoiceNo, model.invoiceNumber],
@@ -150,10 +196,8 @@ export async function renderInvoicePdf(
   hline(y);
   y -= 16;
 
-  // ---- Seller tax identifiers ----
-  const taxBits: string[] = [];
-  if (model.seller.vatId) taxBits.push(`${L.vatId} ${model.seller.vatId}`);
-  if (model.seller.taxNumber) taxBits.push(`${L.taxNo} ${model.seller.taxNumber}`);
+  // ---- Seller tax / registration identifiers (VAT id, SIRET, SIREN, tax no.) ----
+  const taxBits = partyIdLines(model.seller, L.vatId, L.taxNo);
   if (taxBits.length) {
     text(taxBits.join('     '), left, y, { size: FS.small, color: COLORS.muted });
     y -= 20;
@@ -180,7 +224,9 @@ export async function renderInvoicePdf(
 
   for (const line of model.lines) {
     const nameLines = wrapText(line.name, regular, FS.body, descWidth);
-    const descLines = line.description ? wrapText(line.description, regular, FS.small, descWidth) : [];
+    const descLines = line.description
+      ? wrapText(line.description, regular, FS.small, descWidth)
+      : [];
     const rowH = Math.max(16, nameLines.length * 12 + descLines.length * 10 + 6);
     ensure(rowH + 2, true);
 
@@ -195,7 +241,12 @@ export async function renderInvoicePdf(
       text(dl, COL.desc, dy, { size: FS.small, color: COLORS.muted });
       dy -= 10;
     }
-    textRight(`${fmtQty(line.quantity)} ${unitLabel(locale, line.unitCode)}`.trim(), COL.qtyR, baseY, { size: FS.small });
+    textRight(
+      `${fmtQty(line.quantity)} ${unitLabel(locale, line.unitCode)}`.trim(),
+      COL.qtyR,
+      baseY,
+      { size: FS.small },
+    );
     textRight(fmtNum(line.netUnitPrice), COL.priceR, baseY, { size: FS.small });
     textRight(`${fmtRate(line.vatRate)} %`, COL.vatR, baseY, { size: FS.small });
     textRight(fmtNum(line.lineNetAmount), COL.netR, baseY, { size: FS.body });
@@ -208,10 +259,18 @@ export async function renderInvoicePdf(
   ensure(30 + model.vatBreakdown.length * 14 + 40);
   y -= 10;
   const totLabelR = right - 96;
-  const totRow = (label: string, value: string, opts: { strong?: boolean; size?: number } = {}): void => {
+  const totRow = (
+    label: string,
+    value: string,
+    opts: { strong?: boolean; size?: number } = {},
+  ): void => {
     const size = opts.size ?? FS.body;
     const f = opts.strong ? bold : regular;
-    textRight(label, totLabelR, y, { size, font: opts.strong ? bold : regular, color: opts.strong ? COLORS.text : COLORS.muted });
+    textRight(label, totLabelR, y, {
+      size,
+      font: opts.strong ? bold : regular,
+      color: opts.strong ? COLORS.text : COLORS.muted,
+    });
     textRight(value, right, y, { size, font: f });
     y -= size + 6;
   };
@@ -247,7 +306,9 @@ export async function renderInvoicePdf(
     text(L.paymentTitle, left, y, { font: bold, size: FS.h2, color: COLORS.accent });
     y -= 15;
     if (pay.iban) {
-      text(`${L.iban}: ${pay.iban}${pay.bic ? `    ${L.bic}: ${pay.bic}` : ''}`, left, y, { size: FS.small });
+      text(`${L.iban}: ${pay.iban}${pay.bic ? `    ${L.bic}: ${pay.bic}` : ''}`, left, y, {
+        size: FS.small,
+      });
       y -= 12;
     }
     if (pay.accountName) {
@@ -276,17 +337,41 @@ export async function renderInvoicePdf(
     }
   }
 
+  // ---- Legally-mandated fine print (e.g. French Code de commerce mentions) ----
+  if (options.legalNotes?.length) {
+    ensure(30);
+    y -= 10;
+    for (const note of options.legalNotes) {
+      for (const nl of wrapText(note, regular, FS.tiny, contentW)) {
+        ensure(11);
+        text(nl, left, y, { size: FS.tiny, color: COLORS.muted });
+        y -= 10;
+      }
+    }
+  }
+
   // ---- Footer on every page (with final page count) ----
   const pages = doc.getPages();
   const total = pages.length;
   pages.forEach((pg, i) => {
     const fy = PAGE.margin + 22;
-    pg.drawLine({ start: { x: left, y: fy + 10 }, end: { x: right, y: fy + 10 }, thickness: 0.6, color: COLORS.line });
+    pg.drawLine({
+      start: { x: left, y: fy + 10 },
+      end: { x: right, y: fy + 10 },
+      thickness: 0.6,
+      color: COLORS.line,
+    });
     const bits = [model.seller.name];
     if (model.seller.contactPhone) bits.push(model.seller.contactPhone);
     if (model.seller.contactEmail) bits.push(model.seller.contactEmail);
     if (model.seller.vatId) bits.push(`${L.vatId} ${model.seller.vatId}`);
-    pg.drawText(sanitize(bits.join('   ·   ')), { x: left, y: fy, size: FS.tiny, font: regular, color: COLORS.muted });
+    pg.drawText(sanitize(bits.join('   ·   ')), {
+      x: left,
+      y: fy,
+      size: FS.tiny,
+      font: regular,
+      color: COLORS.muted,
+    });
     const pn = `${L.page} ${i + 1} ${L.of} ${total}`;
     const w = regular.widthOfTextAtSize(pn, FS.tiny);
     pg.drawText(pn, { x: right - w, y: fy, size: FS.tiny, font: regular, color: COLORS.muted });

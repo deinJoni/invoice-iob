@@ -48,6 +48,7 @@ function mapParty(p: PartyInput): Party {
     contactPhone: p.contactPhone,
     electronicAddress: p.electronicAddress,
     legalRegistrationId: p.legalRegistrationId,
+    identifiers: p.identifiers,
   };
 }
 
@@ -84,7 +85,11 @@ export function mapToCanonical(input: CreateInvoiceInput): CanonicalInvoice {
   const groups = new Map<string, Group>();
   for (const { line, cents, exemptionReason } of lineData) {
     const key = `${line.vatCategory}:${line.vatRate}`;
-    const g = groups.get(key) ?? { category: line.vatCategory, rate: line.vatRate, taxableCents: 0 };
+    const g = groups.get(key) ?? {
+      category: line.vatCategory,
+      rate: line.vatRate,
+      taxableCents: 0,
+    };
     g.taxableCents += cents;
     if (!g.reason && exemptionReason) g.reason = exemptionReason;
     groups.set(key, g);

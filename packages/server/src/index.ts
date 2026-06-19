@@ -30,6 +30,18 @@ function formatIssue(i: ValidationIssue): string {
   return `${i.rule ? `[${i.rule}] ` : ''}${i.message}`;
 }
 
+/** Default document language for the visual PDF, derived from the seller country. */
+function defaultLang(countryCode: string | undefined): string {
+  switch (countryCode?.toUpperCase()) {
+    case 'FR':
+      return 'fr-FR';
+    case 'DE':
+      return 'de-de';
+    default:
+      return 'en';
+  }
+}
+
 function describeError(err: unknown): string {
   if (err instanceof Error) return err.message;
   try {
@@ -81,17 +93,23 @@ function createServer(): McpServer {
     {
       title: 'Create an EN 16931 e-invoice',
       description:
-        'Build a compliant e-invoice (XRechnung/UBL/CII XML or a human-readable visual PDF; ZUGFeRD/Factur-X hybrid arrives in a later version) from simple fields and save it locally. VAT subtotals and totals are computed automatically. Call list_formats for available formats.',
+        'Build a compliant e-invoice from simple fields and save it locally: EN 16931 XML (XRechnung/UBL/CII), a human-readable visual PDF, or a ZUGFeRD/Factur-X hybrid PDF/A-3 (German `zugferd` or French `factur-x-fr`). VAT subtotals and totals are computed automatically; the visual PDF is localized (set `language`, or it defaults from the seller country). Call list_formats for all available formats.',
       inputSchema: createInvoiceShape,
       outputSchema: createInvoiceOutputShape,
     },
     async (args) => {
       try {
         const input = args as unknown as CreateInvoiceInput;
-        const model = mapToCanonical(input);
 
         const provider = registry.resolve(input.format);
         if (!provider) throw new FormatNotFoundError(input.format, registry.canonicalIds());
+
+        const model = mapToCanonical(input);
+        // Fold any provider-specific friendly input (e.g. French legal extras) into the model's
+        // extension bag via the optional mapExtensions hook, so validate()/render() can read it.
+        if (provider.mapExtensions) {
+          Object.assign(model.extensions, provider.mapExtensions(input));
+        }
 
         const validation = provider.validate(model, input.profile);
         if (!validation.ok) {
@@ -107,15 +125,19 @@ function createServer(): McpServer {
           };
         }
 
+        const lang = input.language ?? defaultLang(model.seller.address.countryCode);
         const artifact = await provider.render(model, {
           profile: input.profile,
-          lang: 'de-de',
+          lang,
         });
         const outputDir = resolveOutputDir();
-        const file = await writeArtifact(outputDir, input.invoiceNumber, provider.meta.id, artifact);
-        const warnings = validation.issues
-          .filter((i) => i.severity === 'warning')
-          .map(formatIssue);
+        const file = await writeArtifact(
+          outputDir,
+          input.invoiceNumber,
+          provider.meta.id,
+          artifact,
+        );
+        const warnings = validation.issues.filter((i) => i.severity === 'warning').map(formatIssue);
 
         const structuredContent = {
           format: provider.meta.id,
@@ -138,7 +160,9 @@ function createServer(): McpServer {
       } catch (err) {
         log('create_invoice error:', err);
         return {
-          content: [{ type: 'text' as const, text: `create_invoice failed: ${describeError(err)}` }],
+          content: [
+            { type: 'text' as const, text: `create_invoice failed: ${describeError(err)}` },
+          ],
           isError: true,
         };
       }

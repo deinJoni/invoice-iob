@@ -14,7 +14,7 @@ export const COLORS = {
 /** Font sizes. */
 export const FS = { title: 22, h2: 10.5, label: 7.5, body: 9.5, small: 8.2, tiny: 7.2 } as const;
 
-export type Locale = 'de' | 'en';
+export type Locale = 'de' | 'en' | 'fr';
 
 export interface Labels {
   invoice: string;
@@ -120,14 +120,80 @@ export const LABELS: Record<Locale, Labels> = {
     of: 'of',
     contact: 'Contact',
   },
+  fr: {
+    invoice: 'Facture',
+    invoiceNo: 'N° de facture',
+    issueDate: 'Date de facture',
+    dueDate: "Date d'échéance",
+    deliveryDate: 'Date de livraison',
+    deliveryPeriod: 'Période',
+    buyerRef: 'Référence acheteur',
+    vatId: 'N° TVA',
+    taxNo: 'N° fiscal',
+    billedTo: 'Facturé à',
+    pos: 'N°',
+    description: 'Désignation',
+    qty: 'Qté',
+    unitPrice: 'Prix unit. HT',
+    vatRate: 'TVA',
+    lineNet: 'Montant HT',
+    subtotalNet: 'Total HT',
+    grossTotal: 'Total TTC',
+    payable: 'Net à payer',
+    paymentTitle: 'Paiement',
+    iban: 'IBAN',
+    bic: 'BIC',
+    account: 'Titulaire',
+    terms: 'Conditions de paiement',
+    vatBreakdownTitle: 'Détail de la TVA',
+    taxable: 'Base HT',
+    taxAmount: 'Montant TVA',
+    rate: 'Taux',
+    reverseCharge: 'Autoliquidation',
+    page: 'Page',
+    of: 'sur',
+    contact: 'Contact',
+  },
 };
 
 const UNIT_LABELS: Record<Locale, Record<string, string>> = {
-  de: { HUR: 'Std.', DAY: 'Tag(e)', C62: 'Stk.', KGM: 'kg', MTR: 'm', LTR: 'l', MON: 'Monat(e)', H87: 'Stk.' },
-  en: { HUR: 'hrs', DAY: 'day(s)', C62: 'pcs', KGM: 'kg', MTR: 'm', LTR: 'l', MON: 'month(s)', H87: 'pcs' },
+  de: {
+    HUR: 'Std.',
+    DAY: 'Tag(e)',
+    C62: 'Stk.',
+    KGM: 'kg',
+    MTR: 'm',
+    LTR: 'l',
+    MON: 'Monat(e)',
+    H87: 'Stk.',
+  },
+  en: {
+    HUR: 'hrs',
+    DAY: 'day(s)',
+    C62: 'pcs',
+    KGM: 'kg',
+    MTR: 'm',
+    LTR: 'l',
+    MON: 'month(s)',
+    H87: 'pcs',
+  },
+  fr: { HUR: 'h', DAY: 'jour(s)', C62: 'u', KGM: 'kg', MTR: 'm', LTR: 'l', MON: 'mois', H87: 'u' },
 };
 
 /** Human-readable unit for a UN/ECE Rec 20 code; falls back to the code. */
 export function unitLabel(locale: Locale, code: string): string {
   return UNIT_LABELS[locale][code] ?? code;
+}
+
+/** Scheme id (EN 16931 ICD list) → short label for party identifiers shown on the PDF. */
+const ID_SCHEME_LABELS: Record<string, string> = {
+  '0002': 'SIREN',
+  '0009': 'SIRET',
+  '0088': 'GLN',
+  '0060': 'DUNS',
+};
+
+/** Short label for a party-identifier scheme id (e.g. "0009" → "SIRET"); undefined if unknown. */
+export function idSchemeLabel(scheme: string | undefined): string | undefined {
+  return scheme ? ID_SCHEME_LABELS[scheme] : undefined;
 }

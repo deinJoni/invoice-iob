@@ -9,9 +9,7 @@
  */
 import * as z from 'zod/v4';
 
-const DATE = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'expected an ISO date (YYYY-MM-DD)');
+const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected an ISO date (YYYY-MM-DD)');
 
 const VAT_CATEGORY = z.enum(['S', 'Z', 'E', 'AE', 'K', 'G', 'O', 'L', 'M']);
 
@@ -43,7 +41,15 @@ export const partyShape = {
   legalRegistrationId: z
     .object({ scheme: z.string().optional(), value: z.string() })
     .optional()
-    .describe('Legal registration id (e.g. Handelsregister number) + optional scheme'),
+    .describe(
+      'Legal registration id (BT-30/BT-47) + optional ICD scheme, e.g. German Handelsregister, or French SIREN with scheme "0002"',
+    ),
+  identifiers: z
+    .array(z.object({ scheme: z.string().optional(), value: z.string() }))
+    .optional()
+    .describe(
+      'Additional party identifiers (BT-29/BT-46) with an optional ICD scheme, e.g. French SIRET [{ "scheme": "0009", "value": "73282932000074" }]',
+    ),
 };
 export const partySchema = z.object(partyShape);
 
@@ -56,7 +62,11 @@ export const lineItemSchema = z.object({
     .default('C62')
     .describe('UN/ECE Rec 20 unit code (C62=unit, HUR=hour, DAY=day, KGM=kg, MTR=metre)'),
   netUnitPrice: z.number().describe('Net price per (base) unit, excluding VAT'),
-  baseQuantity: z.number().positive().optional().describe('Base quantity for the unit price (default 1)'),
+  baseQuantity: z
+    .number()
+    .positive()
+    .optional()
+    .describe('Base quantity for the unit price (default 1)'),
   vatRate: z.number().min(0).max(100).describe('VAT rate as a percentage, e.g. 19'),
   vatCategory: VAT_CATEGORY.default('S').describe(
     'VAT category: S=standard, Z=zero, E=exempt, AE=reverse charge, K=intra-EU, G=export, O=out of scope',
@@ -94,11 +104,23 @@ export const createInvoiceShape = {
     .describe(
       'Output format id. Available: XRECHNUNG-CII, XRECHNUNG-UBL, UBL, CII (XML) or PDF (visual). Call list_formats for all available formats.',
     ),
-  profile: z.string().optional().describe('Optional profile for hybrid formats (default per format)'),
+  profile: z
+    .string()
+    .optional()
+    .describe('Optional profile for hybrid formats (default per format)'),
+  language: z
+    .string()
+    .optional()
+    .describe(
+      'Document language for the visual PDF labels & number/currency formatting (BCP-47-ish, e.g. "fr-FR", "de-de", "en"). Defaults from the seller country.',
+    ),
   invoiceNumber: z.string().min(1).describe('Invoice number (BT-1)'),
   issueDate: DATE.describe('Issue date YYYY-MM-DD (BT-2)'),
   dueDate: DATE.optional().describe('Payment due date YYYY-MM-DD (BT-9)'),
-  typeCode: z.string().default('380').describe('Invoice type code (UNCL1001); 380 = commercial invoice'),
+  typeCode: z
+    .string()
+    .default('380')
+    .describe('Invoice type code (UNCL1001); 380 = commercial invoice'),
   currency: z.string().length(3).default('EUR').describe('ISO 4217 document currency (BT-5)'),
   buyerReference: z
     .string()

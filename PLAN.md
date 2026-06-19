@@ -14,17 +14,17 @@ Cursor, VS Code, and any MCP client. **New countries/formats are plugins, not fo
 
 ## 1. Owner decisions (PRD §14) — answered with PRD recommendations unless noted
 
-| # | Decision | Choice | Note |
-|---|---|---|---|
-| 1 | License | **Apache-2.0** | `LICENSE` written. Engine is WTFPL (permissive, not OSI) → list in NOTICE. |
-| 2 | Display name vs codename | **`invoice-iob` is public** | npm scope `@invoice-iob/*`; repo `deinJoni/invoice-iob`. |
-| 3 | Plugin model | **Monorepo-internal, stable public interface** | Open external `invoice-iob-format-*` after interface settles (P3). |
-| 4 | PDF library | **`@cantoo/pdf-lib`** | Same lib+version core uses → single `PDFDocument` identity. |
-| 5 | Default hybrid profile | **`Factur-X-EN16931`** (Comfort) | MINIMUM/BASIC-WL not offered as standalone-compliant. |
-| 6 | Default DE output | **XRechnung XML default; ZUGFeRD opt-in** | `format` is explicit per call; no implicit default file. |
-| 7 | Roadmap order | **FR → IT → ES → PL** | FR is near-term (engine supports Factur-X already). |
-| 8 | Branding | **Deferred to P3** | Plain, correct layout for P1. |
-| 9 | Font | **IBM Plex Sans (OFL-1.1), Regular+Bold** | Full DE umlauts/ß/€; ship full TTF, subset at render. |
+| #   | Decision                 | Choice                                         | Note                                                                       |
+| --- | ------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | License                  | **Apache-2.0**                                 | `LICENSE` written. Engine is WTFPL (permissive, not OSI) → list in NOTICE. |
+| 2   | Display name vs codename | **`invoice-iob` is public**                    | npm scope `@invoice-iob/*`; repo `deinJoni/invoice-iob`.                   |
+| 3   | Plugin model             | **Monorepo-internal, stable public interface** | Open external `invoice-iob-format-*` after interface settles (P3).         |
+| 4   | PDF library              | **`@cantoo/pdf-lib`**                          | Same lib+version core uses → single `PDFDocument` identity.                |
+| 5   | Default hybrid profile   | **`Factur-X-EN16931`** (Comfort)               | MINIMUM/BASIC-WL not offered as standalone-compliant.                      |
+| 6   | Default DE output        | **XRechnung XML default; ZUGFeRD opt-in**      | `format` is explicit per call; no implicit default file.                   |
+| 7   | Roadmap order            | **FR → IT → ES → PL**                          | FR is near-term (engine supports Factur-X already).                        |
+| 8   | Branding                 | **Deferred to P3**                             | Plain, correct layout for P1.                                              |
+| 9   | Font                     | **IBM Plex Sans (OFL-1.1), Regular+Bold**      | Full DE umlauts/ß/€; ship full TTF, subset at render.                      |
 
 > These are my working defaults so the loop stays autonomous. Owner can override any; I'll re-plan.
 
@@ -41,20 +41,21 @@ friendly input ─▶ Input Mapper ─▶ Canonical Invoice Model ─▶ FormatP
 adapter package centralizes the canonical→UBL-JSON serializer; the MCP server is its own package
 so future non-MCP adapters can reuse `core`):
 
-| package | role | key deps | phase |
-|---|---|---|---|
-| `@invoice-iob/core` | canonical model, `FormatProvider` iface, registry, input mapper, tax math, errors | `zod` | P0 |
-| `@invoice-iob/engine-e-invoice-eu` | engine adapter: canonical→UBL-JSON serializer + `generate()` wrappers + LibreOffice guard | `core`, `@e-invoice-eu/core` | P0 |
-| `@invoice-iob/format-ubl-cii` | providers: `UBL`, `CII` (generic EN16931) | `core`, engine adapter | P0 |
-| `@invoice-iob/format-xrechnung` | providers: `XRECHNUNG-UBL`, `XRECHNUNG-CII` + BR-DE + Leitweg-ID | `core`, engine adapter | P0 |
-| `@invoice-iob/server` | MCP stdio server (`create_invoice`, `list_formats`); **bundle entrypoint** | `core`, format pkgs, SDK, `zod` | P0 |
-| `@invoice-iob/pdf-renderer` | visual PDF via `@cantoo/pdf-lib` + fontkit; template-driven | `core`, pdf-lib, fontkit | P1 |
-| `@invoice-iob/format-pdf` | provider: `PDF` (visual only) | `core`, pdf-renderer | P1 |
-| `@invoice-iob/format-zugferd` | provider: `ZUGFERD`/`FACTUR-X` hybrid (visual PDF → engine Factur-X) | `core`, pdf-renderer, engine adapter | P2 |
+| package                            | role                                                                                      | key deps                             | phase |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ | ----- |
+| `@invoice-iob/core`                | canonical model, `FormatProvider` iface, registry, input mapper, tax math, errors         | `zod`                                | P0    |
+| `@invoice-iob/engine-e-invoice-eu` | engine adapter: canonical→UBL-JSON serializer + `generate()` wrappers + LibreOffice guard | `core`, `@e-invoice-eu/core`         | P0    |
+| `@invoice-iob/format-ubl-cii`      | providers: `UBL`, `CII` (generic EN16931)                                                 | `core`, engine adapter               | P0    |
+| `@invoice-iob/format-xrechnung`    | providers: `XRECHNUNG-UBL`, `XRECHNUNG-CII` + BR-DE + Leitweg-ID                          | `core`, engine adapter               | P0    |
+| `@invoice-iob/server`              | MCP stdio server (`create_invoice`, `list_formats`); **bundle entrypoint**                | `core`, format pkgs, SDK, `zod`      | P0    |
+| `@invoice-iob/pdf-renderer`        | visual PDF via `@cantoo/pdf-lib` + fontkit; template-driven                               | `core`, pdf-lib, fontkit             | P1    |
+| `@invoice-iob/format-pdf`          | provider: `PDF` (visual only)                                                             | `core`, pdf-renderer                 | P1    |
+| `@invoice-iob/format-zugferd`      | provider: `ZUGFERD`/`FACTUR-X` hybrid (visual PDF → engine Factur-X)                      | `core`, pdf-renderer, engine adapter | P2    |
 
 ## 3. Phasing & task checklist
 
-### P0 — Extensible core + XML MVP  ✅ **DONE — exit gate MET**
+### P0 — Extensible core + XML MVP ✅ **DONE — exit gate MET**
+
 **Exit gate:** XML passes EN 16931 (+ KoSIT) validation ✅ (**KoSIT job green in CI**); one-click `.mcpb` installs ✅; a 2nd provider proves the interface ✅ (4 providers / 2 pkgs).
 
 - [x] Recon env (Node 24, pnpm, git), research stack → `docs/STACK.md` + `docs/research/*`
@@ -76,21 +77,36 @@ so future non-MCP adapters can reuse `core`):
 - [ ] `.mcpbignore` + signing wiring (self-signed nightly; real cert at P3)
 - [ ] **Push to GitHub to run CI** (awaiting owner go-ahead) → confirms the KoSIT exit-gate
 
-### P1 — Visual PDF  ✅ **DONE**
+### P1 — Visual PDF ✅ **DONE**
+
 **Exit gate:** visual acceptance + totals match XML. — **MET** (rendered & eyeballed; totals identical to XML, both from the canonical model).
+
 - [x] `@invoice-iob/pdf-renderer` — template-driven (DE/EN labels, Intl number/currency formatting), §14 UStG Pflichtangaben, IBM Plex Sans subset-embedded (vendored OFL TTFs), pagination + page-numbered footer, DeviceRGB/unencrypted (PDF/A-amenable source for P2)
 - [x] `@invoice-iob/format-pdf` — `PDF` provider; amounts read from the canonical model (no recompute); registered in the server
 - [x] Verified end-to-end: smoke test generates a valid 20 KB PDF; rasterized preview reviewed (umlauts + € correct). Bundle now 4.53 MB.
 - [ ] (polish, later) expose `language` on `create_invoice` to select PDF locale; richer VAT-breakdown table; logo/branding (P3)
 
-### P2 — ZUGFeRD/Factur-X  ✅ **DONE — exit gate MET**
+### P2 — ZUGFeRD/Factur-X ✅ **DONE — exit gate MET**
+
 **Exit gate:** veraPDF 3b + ZUGFeRD/Mustang validator pass — **MET** (`pdfa-hybrid` job green in CI; Mustang `--action validate` runs veraPDF for PDF/A-3b + Factur-X container + embedded-XML EN 16931).
+
 - [x] **De-risk spike (PRD §13) — WORKS.** Our visual PDF → `generateFacturX` → PDF/A-3: 28.6 KB hybrid, `factur-x.xml` embedded as `/AF`, XMP `pdfaid:part=3`/`conformance=B`, `fx:ConformanceLevel = EN 16931`. Visual layer preserved (rasterized + reviewed). The #1 flagged risk is retired.
 - [x] `format-zugferd` provider (id `zugferd`, aliases `factur-x`/`facturx`; default profile EN16931; also BASIC/EXTENDED/XRECHNUNG). Registered in the server.
 - [x] CI gate WIRED: `gen-fixtures` emits the hybrid; the `pdfa-hybrid` job runs Mustang `--action validate` (embeds veraPDF → PDF/A-3b + Factur-X container + embedded-XML EN 16931) via `scripts/mustang-check.mjs` (parses the report, not the exit code). Confirmed green only once CI runs **post-push**.
 
 ### P3 — Open up & grow
-- [ ] Public docs site, external-plugin guide, FR provider, bundle signing (real cert), marketplace listing, optional `validate_invoice`
+
+**FR — Factur-X France provider ✅ DONE (flagship plugin proof).** A new country added as a PLUGIN
+against `FormatProvider`, with **zero forks** of the core pipeline — only additive changes + one
+generic serializer improvement. Conformance proven locally (Mustang `--action validate` + embedded
+veraPDF: 21/21 hybrids valid, incl. `invoice-fr × factur-x-fr` EN16931/BASIC/EXTENDED).
+
+- [x] **Research** (3 parallel subagents, cited, verified vs 2026 reality) → [`docs/research/france.md`](docs/research/france.md): reform timeline (réception 2026-09-01 all; émission GE/ETI 2026, PME 2027), PPF/PDP model, the Factur-X/UBL/CII socle, Factur-X profiles (EN16931/Comfort = recommended default), SIREN/SIRET + EAS codes (0002/0009) + Luhn, FR mandatory mentions (CGI 242 nonies A / Code de commerce L441-9, 40 € indemnity), TVA rates + exemption→VATEX mapping, fr-FR labels/formatting, validators (Mustang sufficient).
+- [x] **Smallest core change (generic, helps every country):** serializer emits `cac:PartyIdentification` (BT-29 seller array / BT-46 buyer single); SIREN via `legalRegistrationId` (0002), SIRET via new generic `Party.identifiers` (0009). Plus: wired the dormant `mapExtensions` hook in the server; exposed a `language` field on `create_invoice` (was hardcoded `de-de`) defaulting by seller country.
+- [x] **Renderer `fr` locale:** `LABELS.fr` / `UNIT_LABELS.fr` / `Intl` `fr-FR` / `DD/MM/YYYY`; generic id-scheme→label map (SIREN/SIRET); `legalNotes` channel; normalized the U+202F narrow-space gotcha (accents é è à ç ô + € verified by rasterizing the PDF).
+- [x] **New package `@invoice-iob/format-facturx-fr`** (`factur-x-fr` / `facturx-fr`, FR, hybrid, default EN16931): `validate()` = base EN16931 + FR rules (SIREN/SIRET Luhn incl. La Poste exception, FR TVA rates, FR VAT-number shape, mandatory mentions); `render()` = French PDF → `generateFacturX()`; `mapExtensions()` folds `extensions.fr`. Registered in the server. 13 unit tests (renderer-free `rules.ts`).
+- [x] **CI:** `examples/invoice-fr.json` (mixed TVA 20 %/5,5 %, SIRET/SIREN) + `factur-x-fr` row in the validation matrix → existing `pdfa-hybrid` (Mustang+veraPDF) gate validates it; drift guard in sync (7 formats). Docs updated: SUPPORT_MATRIX (FR→Shipped), README, CODEOWNERS, PROVIDER_GUIDE (country-provider patterns + cross-product rule).
+- [ ] (later) Public docs site, external-plugin guide, bundle signing (real cert), marketplace listing, optional `validate_invoice`; nightly PDP-sandbox integration test for the FR CTC/e-reporting layer (not a CI-runnable Schematron).
 
 ## 4. Key engineering constraints (from research — do not violate)
 
@@ -104,6 +120,24 @@ so future non-MCP adapters can reuse `core`):
 - **CI gates:** KoSIT — parse VARL report (`recommendation=accept`, 0 errors), not exit code. veraPDF `-f 3b`. Byte-equality only vs standalone **Factur-X** CII (not XRechnung CII).
 
 ## 5. Progress log
+
+- **2026-06-19 (7)** — **🇫🇷 FRANCE SHIPPED — the plugin thesis, proven.** Added France end-to-end as a
+  `FormatProvider` plugin with **zero forks of the core pipeline**. Phase 1: 3 parallel research
+  subagents (web, cited, verified vs 2026 reality) → `docs/research/france.md`. Key insight exploited:
+  Factur-X _is_ the French national standard and is the same Franco-German standard as ZUGFeRD, which
+  `@e-invoice-eu/core` already emits — so France = localization + French identifiers + French rules +
+  a French template, not a new engine. The one generic core change France needed: the
+  canonical→UBL-JSON serializer now emits `cac:PartyIdentification` (generic BT-29/46; helps every
+  country) — SIREN via the existing legal-registration id (scheme 0002), SIRET via a new generic
+  `Party.identifiers` (0009). Caught + fixed a real EN 16931 cardinality bug via the CI cross-product
+  (seller identifier = array, buyer = single object). Also wired the previously-dormant `mapExtensions`
+  hook and exposed a `language` field on `create_invoice` (was hardcoded `de-de`). New package
+  `@invoice-iob/format-facturx-fr` (`factur-x-fr`/`facturx-fr`); `fr` renderer locale (accents + €
+  - U+202F-normalized French number formatting verified by rasterization). Validation: typecheck +
+    33 tests + build (4.54 MB) + smoke + drift guard all green; **Mustang `--action validate` + embedded
+    veraPDF: 21/21 hybrids valid** (incl. `invoice-fr × factur-x-fr` EN16931/BASIC/EXTENDED) run locally
+    with a portable JDK 21. Docs: SUPPORT_MATRIX (FR→Shipped), README, CODEOWNERS, PROVIDER_GUIDE
+    (country-provider patterns + the CI cross-product rule). Not pushed (awaiting owner go-ahead).
 
 - **2026-06-19 (6)** — **🎉 MVP COMPLETE + CI GREEN.** Pushed to GitHub (`deinJoni/invoice-iob`); all three CI jobs pass: `build-test`, `kosit` (P0 XML exit gate — XRechnung passes KoSIT), `pdfa-hybrid` (P2 exit gate — Mustang/veraPDF on the hybrid). Fixed two first-run CI issues: dev/CI must run Node 24 (native TS tests need ≥22.18); the Mustang CLI download used an invalid jq escape (→ pinned the release-asset URL). P0+P1+P2 exit gates formally MET. Remaining is P3 (open-up/grow): `validate_invoice`, `language` on the tool, FR/IT/… providers, bundle signing, marketplace listing.
 

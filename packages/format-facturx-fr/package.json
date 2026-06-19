@@ -1,0 +1,19 @@
+{
+  "name": "@invoice-iob/format-facturx-fr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "French Factur-X hybrid PDF/A-3 provider: our French-localized visual PDF fed to @e-invoice-eu/core for CII embedding + PDF/A-3 assembly, with French business rules (SIREN/SIRET checksums, TVA, mandatory mentions).",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@invoice-iob/engine-e-invoice-eu": "workspace:*",
+    "@invoice-iob/pdf-renderer": "workspace:*"
+  }
+}

@@ -36,6 +36,7 @@ function localeFromLang(lang: string | undefined): Locale | undefined {
   const l = lang?.toLowerCase();
   if (!l) return undefined;
   if (l.startsWith('de')) return 'de';
+  if (l.startsWith('fr')) return 'fr';
   if (l.startsWith('en')) return 'en';
   return undefined;
 }

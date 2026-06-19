@@ -39,6 +39,18 @@ export interface ElectronicAddress {
   value: string;
 }
 
+/**
+ * An additional party identifier (BT-29 seller / BT-46 buyer) with an optional ICD scheme id.
+ * Generic across countries: e.g. French SIRET ({@link scheme} "0009"), GLN ("0088"). This is the
+ * EN 16931 *Seller/Buyer identifier*, distinct from the legal-registration id (BT-30/BT-47) and the
+ * VAT id (BT-31/BT-48).
+ */
+export interface PartyIdentifier {
+  /** Scheme id from the EN 16931 ICD list, e.g. "0009" (FR SIRET), "0088" (GLN). Omit for a bare id. */
+  scheme?: string;
+  value: string;
+}
+
 /** A trading party (seller BG-4 / buyer BG-7). */
 export interface Party {
   name: string; // BT-27 seller / BT-44 buyer — legal registration name
@@ -50,7 +62,8 @@ export interface Party {
   contactEmail?: string; // BT-43 / BT-58
   contactPhone?: string; // BT-42 / BT-57
   electronicAddress?: ElectronicAddress;
-  legalRegistrationId?: { scheme?: string; value: string }; // BT-30 / BT-47
+  legalRegistrationId?: { scheme?: string; value: string }; // BT-30 / BT-47 (e.g. FR SIREN @ scheme 0002)
+  identifiers?: PartyIdentifier[]; // BT-29 seller / BT-46 buyer (e.g. FR SIRET @ scheme 0009)
 }
 
 /** A single invoice line (BG-25). `lineNetAmount` is computed by the mapper. */

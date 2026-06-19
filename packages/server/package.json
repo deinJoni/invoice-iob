@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@invoice-iob/core": "workspace:*",
+    "@invoice-iob/format-facturx-fr": "workspace:*",
     "@invoice-iob/format-pdf": "workspace:*",
     "@invoice-iob/format-ubl-cii": "workspace:*",
     "@invoice-iob/format-xrechnung": "workspace:*",

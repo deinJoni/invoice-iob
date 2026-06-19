@@ -61,6 +61,30 @@ function endpoint(p: Party): Json {
   };
 }
 
+/** One identifier → `{ cbc:ID, cbc:ID@schemeID? }`. */
+function identifierJson(id: { scheme?: string; value: string }): Json {
+  const out: Json = { 'cbc:ID': id.value };
+  if (id.scheme) out['cbc:ID@schemeID'] = id.scheme;
+  return out;
+}
+
+/**
+ * Additional party identifiers (BT-29 seller / BT-46 buyer) → `cac:PartyIdentification`, carrying
+ * `cbc:ID` + optional `cbc:ID@schemeID` (ICD code). Generic across countries — e.g. it is how a
+ * French SIRET (schemeID "0009") rides into the UBL/CII the engine emits. EN 16931 makes the seller
+ * identifier repeatable (0..n → array) but the buyer identifier 0..1 (single object); the engine's
+ * schema enforces exactly that, so we honour the cardinality per side.
+ */
+function sellerIdentifications(p: Party): Json | undefined {
+  if (!p.identifiers?.length) return undefined;
+  return { 'cac:PartyIdentification': p.identifiers.map(identifierJson) };
+}
+
+function buyerIdentification(p: Party): Json | undefined {
+  const first = p.identifiers?.[0];
+  return first ? { 'cac:PartyIdentification': identifierJson(first) } : undefined;
+}
+
 function legalEntity(p: Party): Json {
   const le: Json = { 'cbc:RegistrationName': p.name };
   if (p.legalRegistrationId) {
@@ -81,6 +105,8 @@ function sellerTaxSchemes(p: Party): Json[] {
 
 function sellerParty(p: Party): Json {
   const party: Json = { ...endpoint(p) };
+  const ids = sellerIdentifications(p);
+  if (ids) Object.assign(party, ids);
   if (p.tradingName) party['cac:PartyName'] = { 'cbc:Name': p.tradingName };
   party['cac:PostalAddress'] = postalAddress(p);
   const taxSchemes = sellerTaxSchemes(p);
@@ -93,6 +119,8 @@ function sellerParty(p: Party): Json {
 
 function buyerParty(p: Party): Json {
   const party: Json = { ...endpoint(p) };
+  const ids = buyerIdentification(p);
+  if (ids) Object.assign(party, ids);
   if (p.tradingName) party['cac:PartyName'] = { 'cbc:Name': p.tradingName };
   party['cac:PostalAddress'] = postalAddress(p);
   // Buyer PartyTaxScheme is a single object (BT-48), not an array.
@@ -209,7 +237,10 @@ export function serializeToUbl(inv: CanonicalInvoice): Invoice {
     ...money('cbc:TaxInclusiveAmount', inv.totals.taxInclusiveAmount, currency),
   };
   if (inv.totals.allowanceTotalAmount !== undefined)
-    Object.assign(totals, money('cbc:AllowanceTotalAmount', inv.totals.allowanceTotalAmount, currency));
+    Object.assign(
+      totals,
+      money('cbc:AllowanceTotalAmount', inv.totals.allowanceTotalAmount, currency),
+    );
   if (inv.totals.chargeTotalAmount !== undefined)
     Object.assign(totals, money('cbc:ChargeTotalAmount', inv.totals.chargeTotalAmount, currency));
   if (inv.totals.prepaidAmount !== undefined)
