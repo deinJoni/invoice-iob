@@ -14,8 +14,11 @@ concurrency:
 permissions:
   contents: read
 
+# Dev/CI uses Node 24: `node --test` runs the TypeScript tests directly via native type-stripping
+# (default in Node >=22.18). The SHIPPED .mcpb is plain JS (esbuild target node20) and still runs
+# on Node >=20 — that floor is unaffected by this.
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────

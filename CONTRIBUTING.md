@@ -11,8 +11,10 @@ what's supported is [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md).
 
 ## Dev setup
 
-Node ≥ 20 (dev happens on Node 24) and the pinned pnpm — no native toolchain, no JVM, no
-LibreOffice, no Chromium required to build or run the server.
+Node ≥ 22 for development (dev/CI run on Node 24; `pnpm test` executes the TypeScript tests via
+Node's native type-stripping, which is default on Node ≥ 22.18) and the pinned pnpm — no native
+toolchain, no JVM, no LibreOffice, no Chromium required to build or run the server. The shipped
+`.mcpb` is plain JS and runs on Node ≥ 20.
 
 ```bash
 corepack enable        # activates the pnpm version pinned in package.json

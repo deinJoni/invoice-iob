@@ -11,7 +11,7 @@ none of it is ever bundled into the Node-only `.mcpb`. See [`docs/STACK.md`](STA
 
 ### `build-test`
 
-The fast feedback loop, on `ubuntu-latest` / Node 20:
+The fast feedback loop, on `ubuntu-latest` / Node 24:
 
 1. `corepack enable` (pins pnpm from the `packageManager` field — no `pnpm/action-setup` needed)
 2. `pnpm install --frozen-lockfile`
@@ -27,7 +27,7 @@ The `dist/invoice-iob.mcpb` is uploaded as a build artifact. The pnpm store is c
 
 ### `kosit` — P0 exit gate
 
-`needs: build-test`. Sets up Node 20 + Temurin JDK 21, installs, rebuilds the bundle, then:
+`needs: build-test`. Sets up Node 24 + Temurin JDK 21, installs, rebuilds the bundle, then:
 
 1. `node scripts/gen-fixtures.mjs` — drives the bundle (same MCP client pattern as the smoke test)
    to write `XRECHNUNG-CII` and `XRECHNUNG-UBL` into `dist/fixtures/`.
