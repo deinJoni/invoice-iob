@@ -47,7 +47,7 @@ console.log('\nformats:', formatIds.join(', '));
 // 3. create_invoice for each XML format
 const input = JSON.parse(await readFile(join(root, 'examples/invoice-consulting.json'), 'utf8'));
 console.log('\ncreate_invoice:');
-for (const format of ['XRECHNUNG-CII', 'XRECHNUNG-UBL', 'UBL', 'CII']) {
+for (const format of ['XRECHNUNG-CII', 'XRECHNUNG-UBL', 'UBL', 'CII', 'PDF']) {
   const res = await client.callTool({ name: 'create_invoice', arguments: { ...input, format } });
   if (res.isError) {
     fail(`${format}: ${res.content?.[0]?.text}`);
@@ -78,6 +78,16 @@ if (ublName) {
   const xml = await readFile(join(outDir, ublName), 'utf8');
   /<(ubl:)?Invoice/.test(xml) ? ok('UBL: Invoice root') : fail('UBL: wrong root');
 }
+
+const pdfName = files.find((f) => f.endsWith('.pdf'));
+if (pdfName) {
+  const buf = await readFile(join(outDir, pdfName));
+  const head = buf.subarray(0, 8).toString('latin1');
+  const tail = buf.subarray(-1024).toString('latin1');
+  head.startsWith('%PDF-1.') ? ok(`PDF: valid header (${head.trim()})`) : fail('PDF: bad header');
+  tail.includes('%%EOF') ? ok('PDF: %%EOF trailer present') : fail('PDF: no %%EOF');
+  buf.length > 8000 ? ok(`PDF: ${(buf.length / 1024).toFixed(1)} KB (fonts embedded)`) : fail(`PDF: too small (${buf.length} B)`);
+} else fail('no PDF file written');
 
 // 5. negative case: missing buyerReference must fail XRechnung (BR-DE-15)
 const bad = { ...input, format: 'XRECHNUNG-CII' };

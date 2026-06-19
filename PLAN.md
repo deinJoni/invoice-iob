@@ -76,10 +76,12 @@ so future non-MCP adapters can reuse `core`):
 - [ ] `.mcpbignore` + signing wiring (self-signed nightly; real cert at P3)
 - [ ] **Push to GitHub to run CI** (awaiting owner go-ahead) → confirms the KoSIT exit-gate
 
-### P1 — Visual PDF
-**Exit gate:** visual acceptance + totals match XML.
-- [ ] `pdf-renderer` (template-driven, DE/EN; §14 UStG Pflichtangaben); embed IBM Plex Sans subset; PDF/A-amenable source PDF
-- [ ] `format-pdf` provider; totals/VAT pulled from canonical model (no recompute)
+### P1 — Visual PDF  ✅ **DONE**
+**Exit gate:** visual acceptance + totals match XML. — **MET** (rendered & eyeballed; totals identical to XML, both from the canonical model).
+- [x] `@invoice-iob/pdf-renderer` — template-driven (DE/EN labels, Intl number/currency formatting), §14 UStG Pflichtangaben, IBM Plex Sans subset-embedded (vendored OFL TTFs), pagination + page-numbered footer, DeviceRGB/unencrypted (PDF/A-amenable source for P2)
+- [x] `@invoice-iob/format-pdf` — `PDF` provider; amounts read from the canonical model (no recompute); registered in the server
+- [x] Verified end-to-end: smoke test generates a valid 20 KB PDF; rasterized preview reviewed (umlauts + € correct). Bundle now 4.53 MB.
+- [ ] (polish, later) expose `language` on `create_invoice` to select PDF locale; richer VAT-breakdown table; logo/branding (P3)
 
 ### P2 — ZUGFeRD/Factur-X
 **Exit gate:** veraPDF 3b zero errors + ZUGFeRD/Mustang validator pass + embedded XML byte-equals standalone Factur-X CII.
@@ -104,6 +106,7 @@ so future non-MCP adapters can reuse `core`):
 ## 5. Progress log
 
 - **2026-06-19 (1)** — Read PRD; ran parallel stack-research workflow (7 dims) → `docs/STACK.md` + `docs/research/*.md`. 16 PRD corrections captured (zod v4, mcpb rename, engine 3.1.1/WTFPL, UBL-JSON input, don't-ship-ICC, runtime font subset, KoSIT report-parsing, XRechnung 3.0.2, …). Scaffolded repo (git, license, dir tree).
+- **2026-06-19 (4)** — **P1 visual PDF DONE.** New `pdf-renderer` + `format-pdf` packages. Vendored IBM Plex Sans (OFL) Regular+Bold TTFs into `assets/fonts/` (via subagent; all DE glyphs + € verified). Implemented a template-driven A4 renderer (`@cantoo/pdf-lib` + fontkit subset-embed): header/recipient/meta, USt-IdNr, line-item table with wrapping + pagination, per-rate VAT, totals, payment block, note, page-numbered footer; DE/EN labels + `Intl` number/currency formatting; codepoint sanitizer so arbitrary text can't crash `drawText`. Registered the `PDF` provider; smoke test now generates + validates a PDF; rasterized the output and visually confirmed a clean, correct German invoice. Bundle 2.81→4.53 MB (fonts).
 - **2026-06-19 (3)** — OSS scaffolding + CI landed (workflow-generated, accuracy-reviewed, fixes applied): CONTRIBUTING/CoC/CODEOWNERS/issue+PR templates, ARCHITECTURE/PROVIDER_GUIDE/SUPPORT_MATRIX/CI docs, and `ci.yml` with the KoSIT gate (`gen-fixtures.mjs` + `kosit-check.mjs`, VARL-report parsing). Fixed reviewer punch-list (VARL element names, `list_formats` availability wording, Node `>=20`, gitignore `.claude/`); wrote CoC by-reference (Contributor Covenant subagent was content-filter-blocked). 9 unit tests green incl. LibreOffice guard. Note: KoSIT Java gate runs only in GitHub CI (not pushed yet). **P0 ~95%.**
 - **2026-06-19 (2)** — **P0 XML MVP working end-to-end.** Built all 5 packages (core, engine adapter, 2 format pkgs, server). Read engine `.d.ts` → wrote canonical→UBL-JSON serializer against the real shape. Bundled with esbuild (2.81 MB single ESM). Smoke test over a real MCP stdio handshake passes: `list_formats` + `create_invoice` for XRECHNUNG-CII/UBL, UBL, CII with correct VAT math (3089.90+587.08=3676.98), XRechnung 3.0 URN present, BR-DE-15 enforced. 5 unit tests green, typecheck clean. `.mcpb` packs to 877 KB and validates. Caught + fixed: engine logger must go to stderr; param-properties break Node type-stripping (→ `erasableSyntaxOnly`); single shared zod 4.4.3 (no dual-instance). Remaining P0: OSS docs + KoSIT CI gate.
 

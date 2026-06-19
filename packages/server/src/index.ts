@@ -81,7 +81,7 @@ function createServer(): McpServer {
     {
       title: 'Create an EN 16931 e-invoice',
       description:
-        'Build a compliant e-invoice (XRechnung/UBL/CII XML; PDF and ZUGFeRD/Factur-X arrive in later versions) from simple fields and save it locally. VAT subtotals and totals are computed automatically. Call list_formats for available formats.',
+        'Build a compliant e-invoice (XRechnung/UBL/CII XML or a human-readable visual PDF; ZUGFeRD/Factur-X hybrid arrives in a later version) from simple fields and save it locally. VAT subtotals and totals are computed automatically. Call list_formats for available formats.',
       inputSchema: createInvoiceShape,
       outputSchema: createInvoiceOutputShape,
     },

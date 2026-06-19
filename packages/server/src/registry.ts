@@ -6,10 +6,12 @@
 import { FormatRegistry } from '@invoice-iob/core';
 import { register as registerUblCii } from '@invoice-iob/format-ubl-cii';
 import { register as registerXRechnung } from '@invoice-iob/format-xrechnung';
+import { register as registerPdf } from '@invoice-iob/format-pdf';
 
 export function buildRegistry(): FormatRegistry {
   const registry = new FormatRegistry();
-  registerXRechnung(registry); // DE launch formats first (most likely default for DE users)
-  registerUblCii(registry); // generic EU formats
+  registerXRechnung(registry); // DE launch formats (most likely default for DE users)
+  registerUblCii(registry); // generic EU XML
+  registerPdf(registry); // visual PDF
   return registry;
 }

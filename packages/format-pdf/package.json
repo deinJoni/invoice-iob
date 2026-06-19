@@ -1,0 +1,18 @@
+{
+  "name": "@invoice-iob/format-pdf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Visual-PDF-only provider (PDF format). Renders from the canonical model via @invoice-iob/pdf-renderer.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@invoice-iob/pdf-renderer": "workspace:*"
+  }
+}

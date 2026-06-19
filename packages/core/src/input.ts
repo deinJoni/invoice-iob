@@ -92,7 +92,7 @@ export const createInvoiceShape = {
   format: z
     .string()
     .describe(
-      'Output format id. Launch set: XRECHNUNG-CII, XRECHNUNG-UBL, UBL, CII. Call list_formats for all available formats.',
+      'Output format id. Available: XRECHNUNG-CII, XRECHNUNG-UBL, UBL, CII (XML) or PDF (visual). Call list_formats for all available formats.',
     ),
   profile: z.string().optional().describe('Optional profile for hybrid formats (default per format)'),
   invoiceNumber: z.string().min(1).describe('Invoice number (BT-1)'),

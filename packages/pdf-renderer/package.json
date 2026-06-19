@@ -1,0 +1,19 @@
+{
+  "name": "@invoice-iob/pdf-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Template-driven visual invoice PDF renderer (pure JS, @cantoo/pdf-lib + fontkit). Produces a PDF/A-amenable source PDF from the canonical model.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@cantoo/pdf-lib": "2.7.1",
+    "@pdf-lib/fontkit": "1.1.1"
+  }
+}

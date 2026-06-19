@@ -42,6 +42,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/format-pdf:
+    dependencies:
+      '@invoice-iob/core':
+        specifier: workspace:*
+        version: link:../core
+      '@invoice-iob/pdf-renderer':
+        specifier: workspace:*
+        version: link:../pdf-renderer
+
   packages/format-ubl-cii:
     dependencies:
       '@invoice-iob/core':
@@ -60,11 +69,26 @@ importers:
         specifier: workspace:*
         version: link:../engine-e-invoice-eu
 
+  packages/pdf-renderer:
+    dependencies:
+      '@cantoo/pdf-lib':
+        specifier: 2.7.1
+        version: 2.7.1
+      '@invoice-iob/core':
+        specifier: workspace:*
+        version: link:../core
+      '@pdf-lib/fontkit':
+        specifier: 1.1.1
+        version: 1.1.1
+
   packages/server:
     dependencies:
       '@invoice-iob/core':
         specifier: workspace:*
         version: link:../core
+      '@invoice-iob/format-pdf':
+        specifier: workspace:*
+        version: link:../format-pdf
       '@invoice-iob/format-ubl-cii':
         specifier: workspace:*
         version: link:../format-ubl-cii
@@ -353,6 +377,9 @@ packages:
   '@oozcitak/util@10.0.0':
     resolution: {integrity: sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA==}
     engines: {node: '>=20.0'}
+
+  '@pdf-lib/fontkit@1.1.1':
+    resolution: {integrity: sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg==}
 
   '@pdf-lib/standard-fonts@1.0.0':
     resolution: {integrity: sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==}
@@ -1190,6 +1217,10 @@ snapshots:
       '@oozcitak/util': 10.0.0
 
   '@oozcitak/util@10.0.0': {}
+
+  '@pdf-lib/fontkit@1.1.1':
+    dependencies:
+      pako: 1.0.11
 
   '@pdf-lib/standard-fonts@1.0.0':
     dependencies:
