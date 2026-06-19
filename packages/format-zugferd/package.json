@@ -1,0 +1,19 @@
+{
+  "name": "@invoice-iob/format-zugferd",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ZUGFeRD / Factur-X hybrid PDF/A-3 provider: our visual PDF fed to @e-invoice-eu/core for CII embedding + PDF/A-3 assembly.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@invoice-iob/core": "workspace:*",
+    "@invoice-iob/engine-e-invoice-eu": "workspace:*",
+    "@invoice-iob/pdf-renderer": "workspace:*"
+  }
+}

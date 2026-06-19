@@ -69,6 +69,18 @@ importers:
         specifier: workspace:*
         version: link:../engine-e-invoice-eu
 
+  packages/format-zugferd:
+    dependencies:
+      '@invoice-iob/core':
+        specifier: workspace:*
+        version: link:../core
+      '@invoice-iob/engine-e-invoice-eu':
+        specifier: workspace:*
+        version: link:../engine-e-invoice-eu
+      '@invoice-iob/pdf-renderer':
+        specifier: workspace:*
+        version: link:../pdf-renderer
+
   packages/pdf-renderer:
     dependencies:
       '@cantoo/pdf-lib':
@@ -95,6 +107,9 @@ importers:
       '@invoice-iob/format-xrechnung':
         specifier: workspace:*
         version: link:../format-xrechnung
+      '@invoice-iob/format-zugferd':
+        specifier: workspace:*
+        version: link:../format-zugferd
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(zod@4.4.3)

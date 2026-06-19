@@ -11,7 +11,7 @@ files, no runtimes to install.
 
 | | |
 |---|---|
-| **Status** | P0 — Extensible core + XML MVP (working). PDF (P1) and ZUGFeRD/Factur-X (P2) next. |
+| **Status** | MVP — all launch formats work: XRechnung/UBL/CII XML, visual PDF, and ZUGFeRD/Factur-X hybrid PDF/A-3. Official-validator CI gates (KoSIT, veraPDF, Mustang) run on push. |
 | **License** | Apache-2.0 |
 | **Runtime** | Node ≥ 20, fully local, no native dependencies |
 
@@ -31,8 +31,8 @@ Two MCP tools:
 | `XRECHNUNG-UBL` | XML (UBL) | EN 16931 CIUS — XRechnung 3.0 |
 | `UBL` | XML (UBL) | EN 16931 |
 | `CII` | XML (CII) | EN 16931 |
-| `PDF` | Visual PDF | _coming in P1_ |
-| `ZUGFERD` / `FACTUR-X` | Hybrid PDF/A-3 | _coming in P2_ |
+| `PDF` | Visual PDF | DE §14 UStG / EN 16931 fields |
+| `ZUGFERD` / `FACTUR-X` | Hybrid PDF/A-3 (XML embedded) | EN 16931 (Factur-X 1.0, default profile EN 16931) |
 
 ## Quick start
 

@@ -83,11 +83,11 @@ so future non-MCP adapters can reuse `core`):
 - [x] Verified end-to-end: smoke test generates a valid 20 KB PDF; rasterized preview reviewed (umlauts + € correct). Bundle now 4.53 MB.
 - [ ] (polish, later) expose `language` on `create_invoice` to select PDF locale; richer VAT-breakdown table; logo/branding (P3)
 
-### P2 — ZUGFeRD/Factur-X
+### P2 — ZUGFeRD/Factur-X  ✅ **implemented + structurally/visually verified** (conformance gate pending live CI)
 **Exit gate:** veraPDF 3b zero errors + ZUGFeRD/Mustang validator pass + embedded XML byte-equals standalone Factur-X CII.
-- [ ] **De-risk spike first** (PRD §13): minimal PDF → `generate(format=Factur-X, pdf=…)` → veraPDF + Mustang
-- [ ] `format-zugferd` provider (default `Factur-X-EN16931`)
-- [ ] CI: veraPDF `-f 3b` + Mustang `--action validate` on fixtures
+- [x] **De-risk spike (PRD §13) — WORKS.** Our visual PDF → `generateFacturX` → PDF/A-3: 28.6 KB hybrid, `factur-x.xml` embedded as `/AF`, XMP `pdfaid:part=3`/`conformance=B`, `fx:ConformanceLevel = EN 16931`. Visual layer preserved (rasterized + reviewed). The #1 flagged risk is retired.
+- [x] `format-zugferd` provider (id `zugferd`, aliases `factur-x`/`facturx`; default profile EN16931; also BASIC/EXTENDED/XRECHNUNG). Registered in the server.
+- [ ] CI gate (needs push for Java validators): extend `gen-fixtures` to emit the hybrid; enable the veraPDF `-f 3b` + Mustang `--action validate` job (currently `if:false`); assert embedded XML byte-equals the standalone **Factur-X** CII.
 
 ### P3 — Open up & grow
 - [ ] Public docs site, external-plugin guide, FR provider, bundle signing (real cert), marketplace listing, optional `validate_invoice`
@@ -106,6 +106,7 @@ so future non-MCP adapters can reuse `core`):
 ## 5. Progress log
 
 - **2026-06-19 (1)** — Read PRD; ran parallel stack-research workflow (7 dims) → `docs/STACK.md` + `docs/research/*.md`. 16 PRD corrections captured (zod v4, mcpb rename, engine 3.1.1/WTFPL, UBL-JSON input, don't-ship-ICC, runtime font subset, KoSIT report-parsing, XRechnung 3.0.2, …). Scaffolded repo (git, license, dir tree).
+- **2026-06-19 (5)** — **P2 de-risk spike SUCCEEDED → full MVP functionally complete.** New `format-zugferd` provider feeds our visual PDF to `@e-invoice-eu/core`'s Factur-X path. Smoke test produces a valid hybrid PDF/A-3 (factur-x.xml as `/AF`, PDF/A-3B XMP, `fx:ConformanceLevel EN 16931`); rasterized hybrid is pixel-identical to the standalone PDF. All 6 launch formats now generate from one canonical model. Remaining: live conformance gates (KoSIT for XML, veraPDF+Mustang for hybrid) which run in GitHub CI — i.e. they need a push.
 - **2026-06-19 (4)** — **P1 visual PDF DONE.** New `pdf-renderer` + `format-pdf` packages. Vendored IBM Plex Sans (OFL) Regular+Bold TTFs into `assets/fonts/` (via subagent; all DE glyphs + € verified). Implemented a template-driven A4 renderer (`@cantoo/pdf-lib` + fontkit subset-embed): header/recipient/meta, USt-IdNr, line-item table with wrapping + pagination, per-rate VAT, totals, payment block, note, page-numbered footer; DE/EN labels + `Intl` number/currency formatting; codepoint sanitizer so arbitrary text can't crash `drawText`. Registered the `PDF` provider; smoke test now generates + validates a PDF; rasterized the output and visually confirmed a clean, correct German invoice. Bundle 2.81→4.53 MB (fonts).
 - **2026-06-19 (3)** — OSS scaffolding + CI landed (workflow-generated, accuracy-reviewed, fixes applied): CONTRIBUTING/CoC/CODEOWNERS/issue+PR templates, ARCHITECTURE/PROVIDER_GUIDE/SUPPORT_MATRIX/CI docs, and `ci.yml` with the KoSIT gate (`gen-fixtures.mjs` + `kosit-check.mjs`, VARL-report parsing). Fixed reviewer punch-list (VARL element names, `list_formats` availability wording, Node `>=20`, gitignore `.claude/`); wrote CoC by-reference (Contributor Covenant subagent was content-filter-blocked). 9 unit tests green incl. LibreOffice guard. Note: KoSIT Java gate runs only in GitHub CI (not pushed yet). **P0 ~95%.**
 - **2026-06-19 (2)** — **P0 XML MVP working end-to-end.** Built all 5 packages (core, engine adapter, 2 format pkgs, server). Read engine `.d.ts` → wrote canonical→UBL-JSON serializer against the real shape. Bundled with esbuild (2.81 MB single ESM). Smoke test over a real MCP stdio handshake passes: `list_formats` + `create_invoice` for XRECHNUNG-CII/UBL, UBL, CII with correct VAT math (3089.90+587.08=3676.98), XRechnung 3.0 URN present, BR-DE-15 enforced. 5 unit tests green, typecheck clean. `.mcpb` packs to 877 KB and validates. Caught + fixed: engine logger must go to stderr; param-properties break Node type-stripping (→ `erasableSyntaxOnly`); single shared zod 4.4.3 (no dual-instance). Remaining P0: OSS docs + KoSIT CI gate.

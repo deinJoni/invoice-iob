@@ -20,8 +20,10 @@ const transport = new StdioClientTransport({
 const client = new Client({ name: 'preview', version: '0.0.0' });
 await client.connect(transport);
 
+const format = process.argv[2] ?? 'PDF';
+const outName = process.argv[3] ?? 'invoice.pdf';
 const input = JSON.parse(await readFile(join(root, 'examples/invoice-consulting.json'), 'utf8'));
-const res = await client.callTool({ name: 'create_invoice', arguments: { ...input, format: 'PDF' } });
+const res = await client.callTool({ name: 'create_invoice', arguments: { ...input, format } });
 await client.close();
 
 if (res.isError) {
@@ -29,5 +31,5 @@ if (res.isError) {
   process.exit(1);
 }
 const file = res.structuredContent.file;
-await copyFile(file, join(outDir, 'invoice.pdf'));
-console.log('preview PDF:', join(outDir, 'invoice.pdf'));
+await copyFile(file, join(outDir, outName));
+console.log('preview PDF:', join(outDir, outName));

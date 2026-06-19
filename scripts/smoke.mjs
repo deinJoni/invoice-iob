@@ -47,7 +47,7 @@ console.log('\nformats:', formatIds.join(', '));
 // 3. create_invoice for each XML format
 const input = JSON.parse(await readFile(join(root, 'examples/invoice-consulting.json'), 'utf8'));
 console.log('\ncreate_invoice:');
-for (const format of ['XRECHNUNG-CII', 'XRECHNUNG-UBL', 'UBL', 'CII', 'PDF']) {
+for (const format of ['XRECHNUNG-CII', 'XRECHNUNG-UBL', 'UBL', 'CII', 'PDF', 'ZUGFERD']) {
   const res = await client.callTool({ name: 'create_invoice', arguments: { ...input, format } });
   if (res.isError) {
     fail(`${format}: ${res.content?.[0]?.text}`);
@@ -79,7 +79,7 @@ if (ublName) {
   /<(ubl:)?Invoice/.test(xml) ? ok('UBL: Invoice root') : fail('UBL: wrong root');
 }
 
-const pdfName = files.find((f) => f.endsWith('.pdf'));
+const pdfName = files.find((f) => f.endsWith('-pdf.pdf'));
 if (pdfName) {
   const buf = await readFile(join(outDir, pdfName));
   const head = buf.subarray(0, 8).toString('latin1');
@@ -88,6 +88,19 @@ if (pdfName) {
   tail.includes('%%EOF') ? ok('PDF: %%EOF trailer present') : fail('PDF: no %%EOF');
   buf.length > 8000 ? ok(`PDF: ${(buf.length / 1024).toFixed(1)} KB (fonts embedded)`) : fail(`PDF: too small (${buf.length} B)`);
 } else fail('no PDF file written');
+
+// ZUGFeRD / Factur-X hybrid PDF/A-3 (P2 de-risk): the engine must embed factur-x.xml as an
+// Associated File and add PDF/A XMP. Full conformance (veraPDF 3b + Mustang) is the CI gate.
+const zugferdName = files.find((f) => f.includes('zugferd'));
+if (zugferdName) {
+  const buf = await readFile(join(outDir, zugferdName));
+  const raw = buf.toString('latin1');
+  buf.subarray(0, 8).toString('latin1').startsWith('%PDF-') ? ok('ZUGFeRD: valid PDF') : fail('ZUGFeRD: bad PDF');
+  raw.includes('factur-x.xml') ? ok('ZUGFeRD: factur-x.xml embedded') : fail('ZUGFeRD: factur-x.xml NOT embedded');
+  raw.includes('AFRelationship') || /\/AF[\s/<\[]/.test(raw) ? ok('ZUGFeRD: Associated File (/AF) present') : fail('ZUGFeRD: no /AF');
+  raw.includes('pdfaid') ? ok('ZUGFeRD: PDF/A XMP (pdfaid) present') : fail('ZUGFeRD: no PDF/A XMP');
+  buf.length > 20000 ? ok(`ZUGFeRD: ${(buf.length / 1024).toFixed(1)} KB hybrid PDF/A-3`) : fail('ZUGFeRD: too small');
+} else fail('no zugferd file written');
 
 // 5. negative case: missing buyerReference must fail XRechnung (BR-DE-15)
 const bad = { ...input, format: 'XRECHNUNG-CII' };
