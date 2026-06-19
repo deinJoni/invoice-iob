@@ -87,7 +87,7 @@ so future non-MCP adapters can reuse `core`):
 **Exit gate:** veraPDF 3b zero errors + ZUGFeRD/Mustang validator pass + embedded XML byte-equals standalone Factur-X CII.
 - [x] **De-risk spike (PRD §13) — WORKS.** Our visual PDF → `generateFacturX` → PDF/A-3: 28.6 KB hybrid, `factur-x.xml` embedded as `/AF`, XMP `pdfaid:part=3`/`conformance=B`, `fx:ConformanceLevel = EN 16931`. Visual layer preserved (rasterized + reviewed). The #1 flagged risk is retired.
 - [x] `format-zugferd` provider (id `zugferd`, aliases `factur-x`/`facturx`; default profile EN16931; also BASIC/EXTENDED/XRECHNUNG). Registered in the server.
-- [ ] CI gate (needs push for Java validators): extend `gen-fixtures` to emit the hybrid; enable the veraPDF `-f 3b` + Mustang `--action validate` job (currently `if:false`); assert embedded XML byte-equals the standalone **Factur-X** CII.
+- [x] CI gate WIRED: `gen-fixtures` emits the hybrid; the `pdfa-hybrid` job runs Mustang `--action validate` (embeds veraPDF → PDF/A-3b + Factur-X container + embedded-XML EN 16931) via `scripts/mustang-check.mjs` (parses the report, not the exit code). Confirmed green only once CI runs **post-push**.
 
 ### P3 — Open up & grow
 - [ ] Public docs site, external-plugin guide, FR provider, bundle signing (real cert), marketplace listing, optional `validate_invoice`

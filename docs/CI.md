@@ -41,12 +41,18 @@ The `dist/invoice-iob.mcpb` is uploaded as a build artifact. The pnpm store is c
 
 This job is the gate: if any fixture is not accepted, CI fails.
 
-### `pdfa-hybrid` — P2 stub (`if: false`)
+### `pdfa-hybrid` — P2 hybrid gate
 
-A disabled placeholder for the P2 hybrid-PDF gate: veraPDF 1.30 (`-f 3b`) + Mustangproject 2.24.0
-`--action validate` on Factur-X fixtures, plus the embedded-XML byte-equality check against the
-standalone **Factur-X** CII (not the XRechnung CII — different schema versions). Wire it up when the
-`format-zugferd` provider lands. The TODO in the workflow lists the exact assertions.
+Generates the ZUGFeRD/Factur-X hybrid fixture (`gen-fixtures.mjs` emits `…-zugferd.pdf`), then runs
+**Mustangproject 2.24.0** `--action validate` on it via `scripts/mustang-check.mjs`. Mustang's
+validate **embeds veraPDF**, so a single invocation covers (a) PDF/A-3b conformance and (b) the
+Factur-X container + the embedded `factur-x.xml` against EN 16931. The checker parses the report's
+`<summary status="valid">` rather than trusting the exit code (which varies across versions).
+
+> Note on byte-equality: the PRD's "embedded XML byte-equals standalone XML" check applies to the
+> embedded **Factur-X** CII, not the XRechnung CII (different schema versions — see docs/STACK.md
+> correction #15). The embedded XML *is* the Factur-X CII (there is no separate standalone artifact
+> for it), and Mustang validates it directly, so that gate is satisfied by the Mustang pass.
 
 ## The KoSIT VARL footgun (read before trusting CI)
 
@@ -92,7 +98,7 @@ Requires a JDK (21 in CI; any 11+ works locally). The validator resolves its Sch
 relative to the directory of the `scenarios.xml` you pass — `kosit-check.mjs` derives that
 repository directory for you.
 
-### P2 validators (when the hybrid PDF lands)
+### P2 validators (hybrid PDF)
 
 ```bash
 # veraPDF — PDF/A-3b conformance

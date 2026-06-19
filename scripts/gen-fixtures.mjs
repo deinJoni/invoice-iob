@@ -15,8 +15,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const bundle = join(root, 'dist/bundle/server/index.mjs');
 const outDir = join(root, 'dist/fixtures');
 
-// XML formats only — these are the P0 KoSIT exit-gate fixtures.
-const FORMATS = ['XRECHNUNG-CII', 'XRECHNUNG-UBL'];
+// XML fixtures for the KoSIT (P0) gate + the ZUGFeRD hybrid for the Mustang/veraPDF (P2) gate.
+// kosit-check.mjs validates only *.xml; mustang-check.mjs validates only *.pdf.
+const FORMATS = ['XRECHNUNG-CII', 'XRECHNUNG-UBL', 'ZUGFERD'];
 
 let failures = 0;
 const fail = (msg) => {

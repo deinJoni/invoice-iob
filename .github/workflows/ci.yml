@@ -143,19 +143,62 @@ jobs:
         run: node scripts/kosit-check.mjs
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # P2 stub — hybrid PDF/A-3 conformance. Disabled until the Factur-X provider lands.
-  # TODO(P2): drop `if: false`, generate a Factur-X fixture, then gate on:
-  #   - veraPDF 1.30: `verapdf -f 3b <pdf>` → assert isCompliant=true, failedChecks=0
-  #   - Mustangproject 2.24.0: `java -jar Mustang-CLI.jar --action validate --source <pdf>`
-  #       → assert status=valid AND profile == "EN 16931"
-  #   - extract the embedded factur-x.xml and byte-compare against the standalone Factur-X CII
-  #     (NOT the XRechnung CII — different schema versions; see docs/STACK.md correction #15).
+  # pdfa-hybrid: P2 EXIT GATE. Generates the ZUGFeRD/Factur-X hybrid, then validates it with the
+  # Mustangproject CLI, whose `--action validate` runs an embedded veraPDF (PDF/A-3b conformance)
+  # AND checks the Factur-X container + the embedded factur-x.xml against EN 16931. We parse the
+  # report's summary status (Mustang's exit code is unreliable across versions; see mustang-check.mjs).
   # ─────────────────────────────────────────────────────────────────────────────
   pdfa-hybrid:
-    name: PDF/A-3 + Factur-X validation (P2 — stub)
-    if: false
+    name: ZUGFeRD/Factur-X + PDF/A-3 validation (P2 gate)
     runs-on: ubuntu-latest
     needs: build-test
     steps:
       - uses: actions/checkout@v4
-      - run: echo "P2 gate not yet wired — see TODO above."
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build bundle
+        run: pnpm run build
+
+      - name: Generate fixtures (incl. ZUGFeRD hybrid)
+        run: node scripts/gen-fixtures.mjs
+
+      # Resolve the Mustang-CLI jar URL via the GitHub Releases API (tags rot less than asset paths).
+      - name: Download Mustangproject CLI 2.24.0 (embeds veraPDF)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MUSTANG_TAG: core-2.24.0
+        run: |
+          set -euo pipefail
+          mkdir -p .validators
+          asset_re='Mustang-CLI.*\.jar$'
+          # Try the pinned tag first, then fall back to scanning recent releases for the CLI jar.
+          JAR_URL="$(gh api "repos/ZUGFeRD/mustangproject/releases/tags/${MUSTANG_TAG}" \
+            --jq ".assets[] | select(.name | test(\"${asset_re}\")) | .browser_download_url" 2>/dev/null | head -n1 || true)"
+          if [ -z "${JAR_URL:-}" ]; then
+            JAR_URL="$(gh api "repos/ZUGFeRD/mustangproject/releases?per_page=30" \
+              --jq ".[].assets[] | select(.name | test(\"${asset_re}\")) | .browser_download_url" | head -n1)"
+          fi
+          test -n "${JAR_URL:-}" || { echo "Could not resolve a Mustang-CLI jar URL"; exit 1; }
+          echo "Mustang CLI: $JAR_URL"
+          curl -fsSL "$JAR_URL" -o .validators/mustang-cli.jar
+          echo "MUSTANG_JAR=$PWD/.validators/mustang-cli.jar" >> "$GITHUB_ENV"
+
+      - name: Validate hybrid (Mustang --action validate → embedded veraPDF + Factur-X)
+        env:
+          FIXTURES_DIR: dist/fixtures
+        run: node scripts/mustang-check.mjs
