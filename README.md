@@ -1,5 +1,8 @@
 # invoice-iob
 
+[![CI](https://github.com/deinJoni/invoice-iob/actions/workflows/ci.yml/badge.svg)](https://github.com/deinJoni/invoice-iob/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 > **A fully local, open-source MCP server that turns simple invoice details into compliant
 > e-invoices.** No invoice data ever leaves your machine.
 
