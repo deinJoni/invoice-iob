@@ -214,7 +214,14 @@ export function serializeToUbl(inv: CanonicalInvoice): Invoice {
   ubl['cac:AccountingSupplierParty'] = sellerParty(inv.seller);
   ubl['cac:AccountingCustomerParty'] = buyerParty(inv.buyer);
 
-  if (inv.delivery?.date) ubl['cac:Delivery'] = { 'cbc:ActualDeliveryDate': inv.delivery.date };
+  // BT-72 Actual delivery date. CII requires the BG-13 ApplicableHeaderTradeDelivery element, and
+  // @e-invoice-eu only emits it from cac:Delivery (an empty cac:Delivery is dropped in the UBL→CII
+  // step AND is itself invalid UBL). So when an invoice gives only a service/billing period and no
+  // explicit date, default the delivery date to the period end (the service completion / tax point —
+  // standard practice for a continuous service). This keeps the period in Settlement (BG-14) and
+  // still produces the mandatory Delivery block, valid in both UBL and CII.
+  const deliveryDate = inv.delivery?.date ?? inv.delivery?.periodEnd ?? inv.delivery?.periodStart;
+  if (deliveryDate) ubl['cac:Delivery'] = { 'cbc:ActualDeliveryDate': deliveryDate };
 
   const pm = paymentMeans(inv);
   if (pm) ubl['cac:PaymentMeans'] = pm;
