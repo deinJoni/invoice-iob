@@ -3,8 +3,8 @@
   "name": "invoice-iob",
   "display_name": "invoice-iob — EN 16931 E-Invoices",
   "version": "0.1.0",
-  "description": "Create EN 16931 e-invoices (XRechnung/UBL/CII XML; visual PDF & ZUGFeRD/Factur-X coming) from simple fields — fully local, no data leaves your machine.",
-  "long_description": "invoice-iob turns simple invoice details into compliant e-invoices for the German/EU market. It generates XRechnung 3.0 (UBL & CII), generic EN 16931 UBL/CII, and — in upcoming versions — a human-readable PDF and a ZUGFeRD/Factur-X hybrid PDF/A-3. Everything runs locally on your machine; no invoice data is ever transmitted. New countries and formats are added as plugins against a stable FormatProvider interface.",
+  "description": "Create EN 16931 e-invoices — XRechnung/UBL/CII XML, a visual PDF, and German (ZUGFeRD/Factur-X) or French (Factur-X) hybrid PDF/A-3 — from simple fields. Fully local; no data leaves your machine.",
+  "long_description": "invoice-iob turns simple invoice details into compliant e-invoices for the German/EU market. It generates XRechnung 3.0 (UBL & CII), generic EN 16931 UBL/CII, a human-readable PDF, and a ZUGFeRD/Factur-X hybrid PDF/A-3 — for Germany and for France (the factur-x-fr provider, French-localized with French business rules). Everything runs locally on your machine; no invoice data is ever transmitted. New countries and formats are added as plugins against a stable FormatProvider interface — call list_formats to see what this build supports.",
   "author": {
     "name": "invoice-iob contributors",
     "url": "https://github.com/deinJoni/invoice-iob"
@@ -22,6 +22,9 @@
     "en16931",
     "ubl",
     "cii",
+    "pdf",
+    "france",
+    "germany",
     "mcp"
   ],
   "server": {
@@ -38,7 +41,7 @@
   "tools": [
     {
       "name": "create_invoice",
-      "description": "Create an EN 16931 e-invoice (XML now; PDF and ZUGFeRD/Factur-X in later versions) and save it to the output folder."
+      "description": "Create an EN 16931 e-invoice — XRechnung/UBL/CII XML, a visual PDF, or a ZUGFeRD/Factur-X hybrid PDF/A-3 (German or French) — and save it to the output folder. Call list_formats for the available formats."
     },
     {
       "name": "list_formats",
