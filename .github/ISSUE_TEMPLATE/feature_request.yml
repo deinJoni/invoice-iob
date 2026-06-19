@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest an improvement or new capability (not a new country/format provider).
+title: "[feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposing support for a **new country or format**? Please use the
+        **New country/format provider** template instead — it captures the engine,
+        bundleability, and validator details we need up front.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the use case or pain point. What can't you do today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like invoice-iob to do? Sketch the tool input/output if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried, or other approaches you weighed.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      description: invoice-iob is fully local, Node-only, and ships as a self-contained `.mcpb`. Please confirm your idea fits.
+      options:
+        - label: This does not require sending invoice data off the user's machine.
+        - label: This does not add a native runtime dependency to the default bundle (no JVM / LibreOffice / Ghostscript / Chromium).

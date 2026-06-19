@@ -1,0 +1,104 @@
+name: New country/format provider
+description: Propose support for a new country or e-invoice format as a FormatProvider plugin.
+title: "New country/format provider: "
+labels: [provider]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        invoice-iob adds countries and formats as **plugins, not forks** — a new
+        `FormatProvider` against the stable interface in
+        [`packages/core/src/provider.ts`](https://github.com/deinJoni/invoice-iob/blob/main/packages/core/src/provider.ts).
+        The roadmap order is FR → IT → ES → PL, but well-scoped proposals for other
+        countries are welcome. The answers below tell us whether a provider can ship in
+        the Node-only `.mcpb` (it must add no native runtime dependency).
+
+  - type: input
+    id: country
+    attributes:
+      label: Country (ISO 3166-1 alpha-2)
+      placeholder: FR
+    validations:
+      required: true
+
+  - type: input
+    id: standard
+    attributes:
+      label: Format / standard
+      description: The format name and the standard / CIUS it implements.
+      placeholder: Factur-X 1.07.3 — EN 16931 CIUS (Chorus Pro)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: syntax
+    attributes:
+      label: Syntax
+      options:
+        - UBL
+        - CII
+        - national (other XML)
+        - PDF
+        - hybrid (PDF/A-3 with embedded XML)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pure-js-engine
+    attributes:
+      label: Is a pure-JS engine / library available?
+      description: A provider must render without spawning a JVM or other native process. Does an existing JS lib cover this format?
+      options:
+        - "Yes — @e-invoice-eu/core already supports it"
+        - "Yes — another pure-JS library exists (link below)"
+        - "Partially — JS exists but doesn't cover this format/CIUS"
+        - "No — only Java/.NET/native tooling exists"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bundleable
+    attributes:
+      label: Bundleable in the default `.mcpb`?
+      description: Maps to `FormatProvider.meta.bundleable`. "No" means it cannot ship in the default Node-only bundle.
+      options:
+        - "Yes — pure JS, no native deps"
+        - "No — requires a native runtime / external tool"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: validator
+    attributes:
+      label: Is an official validator available?
+      description: For the CI validation gate (like KoSIT for XRechnung). Note any exit-code footguns in the links below.
+      options:
+        - "Yes — official / government validator"
+        - "Yes — community / third-party validator"
+        - "No known validator"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Links to the spec, schema, engine, and validator
+      description: Official specification, XSD/Schematron, candidate JS library, and validator artifacts.
+      placeholder: |
+        Spec:      https://...
+        Schema:    https://...
+        Engine:    https://...
+        Validator: https://...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Mandatory national business rules (e.g. a BR-DE-15 / Leitweg-ID equivalent), known quirks, or willingness to contribute the provider.
+    validations:
+      required: false

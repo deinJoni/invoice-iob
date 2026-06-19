@@ -21,6 +21,9 @@ coverage/
 /tmp/
 *.local
 
+# Claude Code session data (workflow scripts, memory, transcripts)
+.claude/
+
 # Editor / OS
 .DS_Store
 .idea/

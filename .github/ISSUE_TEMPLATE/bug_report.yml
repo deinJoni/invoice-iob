@@ -1,0 +1,91 @@
+name: Bug report
+description: Something produced a wrong, invalid, or unexpected e-invoice.
+title: "[bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. invoice-iob runs fully locally and never sends your
+        invoice data anywhere — so please paste the inputs and logs that reproduce this.
+        Redact any real customer data first; the example in
+        [`examples/invoice-consulting.json`](https://github.com/deinJoni/invoice-iob/blob/main/examples/invoice-consulting.json)
+        is a good sanitised starting point.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and how it differs from what you expected.
+      placeholder: The generated XRECHNUNG-CII XML is rejected by KoSIT with BR-DE-15...
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Include the exact `create_invoice` input (the friendly JSON, not the engine
+        UBL-JSON) that triggers the bug. Code blocks are fenced as JSON automatically.
+      render: json
+      placeholder: |
+        {
+          "format": "XRECHNUNG-CII",
+          "invoiceNumber": "2026-0042",
+          "issueDate": "2026-06-19",
+          "buyerReference": "04011000-12345-67",
+          "seller": { "...": "..." },
+          "buyer":  { "...": "..." },
+          "lines":  [ { "...": "..." } ]
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: Format used
+      description: Which `format` was passed to `create_invoice`?
+      options:
+        - XRECHNUNG-CII
+        - XRECHNUNG-UBL
+        - UBL
+        - CII
+        - PDF (P1, not yet released)
+        - ZUGFERD / FACTUR-X (P2, not yet released)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version (`node -v`, must be ≥ 20), MCP client, and how you installed (`.mcpb`, `claude mcp add`, raw `node …/index.mjs`).
+      placeholder: |
+        OS:        macOS 15.5 (arm64)
+        Node:      v24.3.0
+        Client:    Claude Desktop 0.x / Claude Code / Cursor / VS Code
+        Install:   dist/invoice-iob.mcpb (one-click)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >
+        Paste the server's stderr output (all diagnostics go to stderr — stdout is the
+        JSON-RPC channel). Do not paste stdout. This will be formatted as a shell block.
+      render: shell
+    validations:
+      required: false

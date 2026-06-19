@@ -54,7 +54,7 @@ so future non-MCP adapters can reuse `core`):
 
 ## 3. Phasing & task checklist
 
-### P0 — Extensible core + XML MVP  ← **CURRENT (≈85% done)**
+### P0 — Extensible core + XML MVP  ← **CURRENT (≈95% — only the live KoSIT CI run, which needs a push, remains)**
 **Exit gate:** XML passes EN 16931 (+ KoSIT) validation; one-click `.mcpb` installs; a 2nd provider proves the interface.
 
 - [x] Recon env (Node 24, pnpm, git), research stack → `docs/STACK.md` + `docs/research/*`
@@ -70,10 +70,11 @@ so future non-MCP adapters can reuse `core`):
 - [x] 5 tax-engine unit tests pass; typecheck clean (`erasableSyntaxOnly`)
 - [x] `manifest.json` (v0.3, node, directory user_config) validates; `mcpb pack` → **877 KB `.mcpb`** (≪ 5 MB cap)
 - [x] Example input `examples/invoice-consulting.json`
-- [ ] OSS scaffolding (README, CONTRIBUTING incl. §9.3 recipe, CODE_OF_CONDUCT, CODEOWNERS, issue/PR templates, ARCHITECTURE, PROVIDER_GUIDE) — **in progress**
-- [ ] CI: install → typecheck → test → build → pack → **KoSIT validate** (parse VARL report `recommendation=accept` + 0 errors, NOT exit code) — closes the last exit-gate item
-- [ ] Unit test for `assertNoLibreOffice` guard
+- [x] OSS scaffolding: README, CONTRIBUTING (incl. §9.3 recipe), CODE_OF_CONDUCT, CODEOWNERS, issue/PR templates, `docs/ARCHITECTURE.md`, `docs/PROVIDER_GUIDE.md`, `docs/SUPPORT_MATRIX.md`, `docs/CI.md` — generated via workflow + accuracy-reviewed + fixes applied
+- [x] CI (`.github/workflows/ci.yml`): install → typecheck → test → build → pack → smoke; **KoSIT validate** job (`scripts/gen-fixtures.mjs` + `scripts/kosit-check.mjs` parse the VARL `<rep:accept>` + 0 `<rep:message level="error">`). Fixtures verified locally. ⚠️ **The KoSIT Java job only runs once pushed to GitHub — not pushed yet, so the EN16931/KoSIT exit-gate is "pending live CI".**
+- [x] Unit test for `assertNoLibreOffice` guard (4 tests; 9 total green)
 - [ ] `.mcpbignore` + signing wiring (self-signed nightly; real cert at P3)
+- [ ] **Push to GitHub to run CI** (awaiting owner go-ahead) → confirms the KoSIT exit-gate
 
 ### P1 — Visual PDF
 **Exit gate:** visual acceptance + totals match XML.
@@ -103,6 +104,7 @@ so future non-MCP adapters can reuse `core`):
 ## 5. Progress log
 
 - **2026-06-19 (1)** — Read PRD; ran parallel stack-research workflow (7 dims) → `docs/STACK.md` + `docs/research/*.md`. 16 PRD corrections captured (zod v4, mcpb rename, engine 3.1.1/WTFPL, UBL-JSON input, don't-ship-ICC, runtime font subset, KoSIT report-parsing, XRechnung 3.0.2, …). Scaffolded repo (git, license, dir tree).
+- **2026-06-19 (3)** — OSS scaffolding + CI landed (workflow-generated, accuracy-reviewed, fixes applied): CONTRIBUTING/CoC/CODEOWNERS/issue+PR templates, ARCHITECTURE/PROVIDER_GUIDE/SUPPORT_MATRIX/CI docs, and `ci.yml` with the KoSIT gate (`gen-fixtures.mjs` + `kosit-check.mjs`, VARL-report parsing). Fixed reviewer punch-list (VARL element names, `list_formats` availability wording, Node `>=20`, gitignore `.claude/`); wrote CoC by-reference (Contributor Covenant subagent was content-filter-blocked). 9 unit tests green incl. LibreOffice guard. Note: KoSIT Java gate runs only in GitHub CI (not pushed yet). **P0 ~95%.**
 - **2026-06-19 (2)** — **P0 XML MVP working end-to-end.** Built all 5 packages (core, engine adapter, 2 format pkgs, server). Read engine `.d.ts` → wrote canonical→UBL-JSON serializer against the real shape. Bundled with esbuild (2.81 MB single ESM). Smoke test over a real MCP stdio handshake passes: `list_formats` + `create_invoice` for XRECHNUNG-CII/UBL, UBL, CII with correct VAT math (3089.90+587.08=3676.98), XRechnung 3.0 URN present, BR-DE-15 enforced. 5 unit tests green, typecheck clean. `.mcpb` packs to 877 KB and validates. Caught + fixed: engine logger must go to stderr; param-properties break Node type-stripping (→ `erasableSyntaxOnly`); single shared zod 4.4.3 (no dual-instance). Remaining P0: OSS docs + KoSIT CI gate.
 
 ## 6. Open questions for owner (non-blocking; proceeding with defaults)

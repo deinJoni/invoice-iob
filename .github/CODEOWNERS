@@ -1,0 +1,33 @@
+# CODEOWNERS — review ownership for invoice-iob
+# https://docs.github.com/articles/about-code-owners
+#
+# Each line maps a path to its reviewer(s). The LAST matching line wins, so the
+# explicit per-area lines below override the catch-all.
+#
+# NEW FORMAT PACKAGES: when you add a provider package (e.g. packages/format-fr/),
+# add a CODEOWNERS line for it here in the same PR so the support matrix and review
+# ownership stay in sync. See CONTRIBUTING.md (§9.3 recipe) and docs/PROVIDER_GUIDE.md.
+
+# Catch-all — owns everything not matched more specifically below.
+*                                   @deinJoni
+
+# Canonical EN 16931 model, FormatProvider interface, registry, input mapper, tax math.
+/packages/core/                     @deinJoni
+
+# Engine adapter over @e-invoice-eu/core (canonical→UBL-JSON, XML + Factur-X, LibreOffice guard).
+/packages/engine-e-invoice-eu/      @deinJoni
+
+# XRechnung 3.0 providers (xrechnung-ubl, xrechnung-cii) + BR-DE + Leitweg-ID.
+/packages/format-xrechnung/         @deinJoni
+
+# Generic EN 16931 UBL & CII providers.
+/packages/format-ubl-cii/           @deinJoni
+
+# MCP stdio server (create_invoice, list_formats) — the bundle entrypoint.
+/packages/server/                   @deinJoni
+
+# Spec, roadmap, stack decisions, research notes.
+/docs/                              @deinJoni
+
+# Repo automation, issue/PR templates, this file.
+/.github/                           @deinJoni
